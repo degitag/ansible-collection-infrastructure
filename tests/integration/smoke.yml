@@ -14,6 +14,8 @@
     packages_defaults_install: '{{ smoke_packages_install_map[ansible_os_family] | default([''sudo'']) }}'
     packages_defaults_install_epel: []
     packages_defaults_remove: []
+    # Public test certificate only; its disposable private key is not retained.
+    ca_source_path: "{{ playbook_dir }}/files/ca/*.crt"
     proxy_env: {}
     msmtp_auth: "off"
     msmtp_tls: "off"
