@@ -34,9 +34,6 @@
       sudo: true
       cmd: ALL=(ALL) NOPASSWD:ALL
     resolvconf_manage_systemd_resolved: false
-    resolvconf_nameservers:
-    - 1.1.1.1
-    - 9.9.9.9
     sftp_server_manage_service: false
     sftp_server_users:
     - name: sftpci
@@ -50,6 +47,14 @@
     resolvconf_unsafe_writes: true
     conditional_reboot_manage_service: false
     conditional_reboot_log_path: ''
+  pre_tasks:
+  - name: Read the container resolver endpoints
+    ansible.builtin.slurp:
+      path: /etc/resolv.conf
+    register: __smoke_initial_resolver
+  - name: Keep reachable runner DNS while testing resolver configuration
+    ansible.builtin.set_fact:
+      resolvconf_nameservers: "{{ (__smoke_initial_resolver.content | b64decode) | regex_findall('(?m)^nameserver\\s+(\\S+)') }}"
   tasks:
   - name: Apply baseline package role
     ansible.builtin.import_role:

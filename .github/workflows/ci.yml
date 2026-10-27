@@ -32,7 +32,7 @@ jobs:
       run: |
         python -m pip install -r requirements-test.txt
         python -m pip install 'ansible-core~=${{ matrix.core }}.0'
-        ansible-galaxy collection install -r requirements.yml
+        ansible-galaxy collection install --no-cache -r requirements.yml
     - name: Run repository checks
       id: checks
       run: |
@@ -75,8 +75,8 @@ jobs:
     - name: Install controller and collection
       run: |
         python -m pip install -r requirements-test.txt
-        ansible-galaxy collection install -r requirements.yml
-        ansible-galaxy collection install -r requirements-dev.yml
+        ansible-galaxy collection install --no-cache -r requirements.yml
+        ansible-galaxy collection install --no-cache -r requirements-dev.yml
         ansible-galaxy collection build --force
         ansible-galaxy collection install "$(python tools/collection_metadata.py artifact)" --force --no-deps
     - name: Run baseline and verify idempotence
@@ -141,8 +141,8 @@ jobs:
     - name: Install controller and collection
       run: |
         python -m pip install -r requirements-test.txt
-        ansible-galaxy collection install -r requirements.yml
-        ansible-galaxy collection install -r requirements-dev.yml
+        ansible-galaxy collection install --no-cache -r requirements.yml
+        ansible-galaxy collection install --no-cache -r requirements-dev.yml
         ansible-galaxy collection build --force
         ansible-galaxy collection install "$(python tools/collection_metadata.py artifact)" --force --no-deps
     - name: Verify role behavior and idempotence
