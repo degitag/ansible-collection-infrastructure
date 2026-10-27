@@ -44,7 +44,7 @@ Controller: Python 3.12–3.14 und Ansible Core 2.20/2.21. Die verwalteten Hosts
 # requirements.yml
 collections:
   - name: git+https://github.com/OnkelDom/ansible-collection-infrastructure.git
-    version: v2.0.0
+    version: v2.0.1
 ```
 
 Lokal aus dem vorbereiteten Checkout bauen:
@@ -52,7 +52,7 @@ Lokal aus dem vorbereiteten Checkout bauen:
 ```bash
 ansible-galaxy collection install -r requirements.yml
 ansible-galaxy collection build --force
-ansible-galaxy collection install degitag-infrastructure-2.0.0.tar.gz --force
+ansible-galaxy collection install degitag-infrastructure-2.0.1.tar.gz --force
 ```
 
 Das GitHub-Repository liegt unter `OnkelDom`, der Ansible-Namespace ist `degitag`. Die Git-Installation setzt einen passenden Release-Tag voraus; der Build aus dem Checkout ist davon unabhaengig.

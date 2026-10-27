@@ -37,7 +37,19 @@
     url: '{{ telegraf_gpg_key_url }}'
     dest: "{{ telegraf_apt_key_download_path if ansible_facts.os_family == 'Debian' else '/etc/pki/rpm-gpg/RPM-GPG-KEY-influxdata' }}"
     mode: '0644'
+  register: __telegraf_repository_key
   when: telegraf_manage_repository | bool
+  become: true
+  tags: telegraf
+
+- name: Inspect the installed Debian repository keyring
+  ansible.builtin.stat:
+    path: '{{ telegraf_apt_keyring_path }}'
+    get_checksum: false
+  register: __telegraf_apt_keyring
+  when:
+  - telegraf_manage_repository | bool
+  - ansible_facts.os_family == 'Debian'
   become: true
   tags: telegraf
 
@@ -53,6 +65,7 @@
   when:
   - telegraf_manage_repository | bool
   - ansible_facts.os_family == 'Debian'
+  - __telegraf_repository_key.changed or not __telegraf_apt_keyring.stat.exists or (__telegraf_apt_keyring.stat.size | default(0) | int) == 0
   become: true
   changed_when: true
   tags: telegraf

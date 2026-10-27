@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.1 - 2026-10-27
+
+- Make Debian-family Telegraf repository key conversion idempotent while preserving key rotation and missing/empty keyring recovery.
+- Exercise unchanged runs, rotation, recovery and repository opt-out with real Ansible modules, HTTP downloads and GPG conversion.
+
 ## 2.0.0 - 2026-10-27
 
 ### Shared repository standard
