@@ -1,0 +1,87 @@
+---
+- name: Validate maintenance window before changing reboot configuration
+  ansible.builtin.assert:
+    that:
+    - conditional_reboot_time.hour | int >= 0
+    - conditional_reboot_time.hour | int <= 23
+    - conditional_reboot_time.minute | int >= 0
+    - conditional_reboot_time.minute | int <= 59
+    - conditional_reboot_day_of_week | int >= 1
+    - conditional_reboot_day_of_week | int <= 7
+    - conditional_reboot_day_of_month_range | length == 2
+    - conditional_reboot_day_of_month_range[0] | int >= 1
+    - conditional_reboot_day_of_month_range[1] | int <= 31
+    - conditional_reboot_day_of_month_range[0] | int <= conditional_reboot_day_of_month_range[1] | int
+    - conditional_reboot_window_minutes | int >= 1
+    - conditional_reboot_window_minutes | int <= 60
+    - conditional_reboot_log_path == '' or conditional_reboot_log_path is match('^/[A-Za-z0-9_./-]+$')
+    fail_msg: Supply a valid local-time maintenance window and an absolute log file path.
+- name: Install reboot requirement tooling
+  ansible.builtin.package:
+    name: '{{ _conditional_reboot_packages }}'
+    state: present
+  become: true
+- name: Install the reboot requirement controller
+  ansible.builtin.copy:
+    src: reboot-check.py
+    dest: '{{ _conditional_reboot_script }}'
+    owner: root
+    group: root
+    mode: '0755'
+    validate: /usr/bin/python3 -c "import ast,sys; ast.parse(open(sys.argv[1]).read())" %s
+  become: true
+- name: Write typed reboot policy
+  ansible.builtin.copy:
+    content: '{{ _conditional_reboot_policy | to_nice_json }}
+
+      '
+    dest: '{{ _conditional_reboot_config }}'
+    owner: root
+    group: root
+    mode: '0600'
+  become: true
+  vars:
+    _conditional_reboot_policy:
+      enabled: '{{ conditional_reboot_enabled }}'
+      hour: '{{ conditional_reboot_time.hour }}'
+      minute: '{{ conditional_reboot_time.minute }}'
+      day_filter_enabled: '{{ conditional_reboot_day_filter_enabled }}'
+      day_of_week: '{{ conditional_reboot_day_of_week }}'
+      day_of_month_range: '{{ conditional_reboot_day_of_month_range }}'
+      window_minutes: '{{ conditional_reboot_window_minutes }}'
+      log_path: '{{ conditional_reboot_log_path }}'
+      requirement_file: '{{ _conditional_reboot_requirement_file }}'
+      requirement_command: '{{ _conditional_reboot_requirement_command }}'
+      reboot_command: '{{ _conditional_reboot_command }}'
+- name: Render native reboot service and timer
+  ansible.builtin.template:
+    src: '{{ item }}.j2'
+    dest: '{{ _conditional_reboot_unit_dir }}/{{ item }}'
+    owner: root
+    group: root
+    mode: '0644'
+  loop:
+  - reboot-check.service
+  - reboot-check.timer
+  notify: Reload conditional reboot timer
+  become: true
+- name: Create protected reboot log
+  ansible.builtin.copy:
+    content: ''
+    dest: '{{ conditional_reboot_log_path }}'
+    force: false
+    owner: root
+    group: root
+    mode: '0600'
+  when: conditional_reboot_log_path | length > 0
+  become: true
+- name: Apply timer configuration before activation
+  ansible.builtin.meta: flush_handlers
+- name: Manage reboot timer activation
+  ansible.builtin.systemd_service:
+    name: '{{ _conditional_reboot_timer }}'
+    daemon_reload: true
+    enabled: '{{ conditional_reboot_enabled }}'
+    state: '{{ ''started'' if conditional_reboot_enabled else ''stopped'' }}'
+  when: conditional_reboot_manage_service | bool
+  become: true

@@ -1,6 +1,9 @@
 ---
-- name: restart systemd-timesyncd
-  service:
+- name: Restart systemd-timesyncd
+  ansible.builtin.service:
     name: systemd-timesyncd
     state: restarted
   tags: timesyncd
+  when:
+  - systemd_timesyncd_manage_service | bool
+  - systemd_timesyncd_service_state != 'stopped'

@@ -1,26 +1,26 @@
 ---
 - name: Create directories for NFS mounts
   ansible.builtin.file:
-    path: "{{ item.path }}"
+    path: '{{ item.path }}'
     state: directory
-    mode: "0755"
-  loop: "{{ nfs_mounts }}"
+    mode: '0755'
+  loop: '{{ nfs_mounts }}'
 
 - name: Configure NFS mounts
   ansible.posix.mount:
-    path: "{{ item.path }}"
-    src: "{{ item.remote_host }}:{{ item.remote_path }}"
+    path: '{{ item.path }}'
+    src: '{{ item.remote_host }}:{{ item.remote_path }}'
     fstype: nfs
     state: "{{ 'mounted' if (item.disabled is not defined or not item.disabled) else 'unmounted' }}"
-    opts: "{{ item.options | default(omit) }}"
-  loop: "{{ nfs_mounts }}"
+    opts: '{{ item.options | default(omit) }}'
+  loop: '{{ nfs_mounts }}'
 
 - name: Remove disabled NFS mounts
   ansible.posix.mount:
-    path: "{{ item.path }}"
-    src: "{{ item.remote_host }}:{{ item.remote_path }}"
+    path: '{{ item.path }}'
+    src: '{{ item.remote_host }}:{{ item.remote_path }}'
     fstype: nfs
     state: absent
-    opts: "{{ item.options | default(omit) }}"
-  loop: "{{ nfs_mounts }}"
+    opts: '{{ item.options | default(omit) }}'
+  loop: '{{ nfs_mounts }}'
   when: item.disabled is defined and item.disabled

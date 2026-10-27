@@ -1,7 +1,10 @@
 ---
 - name: Restart keepalived
   ansible.builtin.service:
-    name: "{{ keepalived_service }}"
+    name: '{{ keepalived_service }}'
     state: restarted
   become: true
   tags: keepalived
+  when:
+  - keepalived_manage_service | bool
+  - keepalived_service_state != 'stopped'

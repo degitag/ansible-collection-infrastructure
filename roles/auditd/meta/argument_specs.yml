@@ -17,11 +17,34 @@ argument_specs:
         type: bool
       auditd_service_state:
         description:
-        - Controls `auditd_service_state` for the `auditd` role.
+        - Desired audit daemon runtime state. EL9 uses the supported service control interface.
         required: false
         type: str
+        choices:
+        - started
+        - stopped
       auditd_extra_rules:
         description:
         - Controls `auditd_extra_rules` for the `auditd` role.
         required: false
         type: list
+      auditd_reset_existing_rules:
+        description:
+        - Controls `auditd_reset_existing_rules` for the `auditd` role.
+        required: false
+        type: bool
+      auditd_shell_commands_enabled:
+        description:
+        - Controls `auditd_shell_commands_enabled` for the `auditd` role.
+        required: false
+        type: bool
+      auditd_session_logging_enabled:
+        description:
+        - Controls `auditd_session_logging_enabled` for the `auditd` role.
+        required: false
+        type: bool
+      auditd_remove_legacy_shell_rules:
+        description:
+        - Controls `auditd_remove_legacy_shell_rules` for the `auditd` role.
+        required: false
+        type: bool

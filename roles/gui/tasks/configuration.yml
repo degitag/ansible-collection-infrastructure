@@ -1,0 +1,18 @@
+---
+- name: Install the selected distribution GUI packages
+  ansible.builtin.package:
+    name: '{{ _gui_packages + gui_extra_packages }}'
+    state: present
+  when: gui_enabled | bool
+  become: true
+  tags: gui
+
+- name: Set graphical systemd target as default
+  ansible.builtin.file:
+    src: /usr/lib/systemd/system/{{ gui_default_target }}
+    dest: /etc/systemd/system/default.target
+    state: link
+    force: true
+  when: gui_enabled | bool
+  become: true
+  tags: gui

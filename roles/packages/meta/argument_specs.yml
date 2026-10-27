@@ -60,3 +60,19 @@ argument_specs:
         - Controls `packages_playbook_remove` for the `packages` role.
         required: false
         type: list
+      packages_defaults_install:
+        description:
+        - Baseline packages selected from the platform layer; override to replace the baseline.
+        required: false
+        type: list
+        elements: str
+      packages_defaults_install_epel:
+        description:
+        - Controls `packages_defaults_install_epel` for the `packages` role.
+        required: false
+        type: list
+      packages_defaults_remove:
+        description:
+        - Controls `packages_defaults_remove` for the `packages` role.
+        required: false
+        type: list

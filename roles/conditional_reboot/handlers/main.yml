@@ -1,0 +1,8 @@
+---
+- name: Reload conditional reboot timer
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+    name: '{{ _conditional_reboot_timer }}'
+    state: '{{ ''restarted'' if conditional_reboot_enabled else ''stopped'' }}'
+  when: conditional_reboot_manage_service | bool
+  become: true

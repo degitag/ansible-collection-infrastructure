@@ -1,0 +1,82 @@
+---
+- name: Verify every role preflight on its supported platform
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+  - name: Collect minimal facts for test role selection
+    ansible.builtin.setup:
+      gather_subset:
+      - '!all'
+      - min
+
+  - name: Load the role support inventory
+    ansible.builtin.set_fact:
+      _platform_test_roles: "{{ lookup('file', playbook_dir + '/../../tools/role_scaffold_config.yml') | from_yaml }}"
+
+  - name: Verify portable role preflights without injecting fact aliases
+    ansible.builtin.include_role:
+      name: degitag.infrastructure.{{ item }}
+      tasks_from: preflight
+      rolespec_validate: false
+    loop: '{{ _platform_test_roles.role_descriptions.keys() | list | sort }}'
+    when: >-
+      item not in _platform_test_roles.get('role_platform_overrides', {}) or {'Debian': 'Debian', 'Ubuntu': 'Ubuntu', 'Rocky': 'EL', 'RedHat': 'EL'}[ansible_facts.distribution] in (_platform_test_roles.role_platform_overrides[item] | map(attribute='name') | list)
+
+- name: Verify network and firewall on the disposable test NIC
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    network_interfaces:
+    - name: "{{ test_interface | default('ens19') }}"
+      addresses4:
+      - 198.18.0.{{ inventory_hostname | regex_search('[0-9]+$') | int }}/24
+      addresses6:
+      - 2001:db8:de61::{{ inventory_hostname | regex_search('[0-9]+$') | int }}/64
+    network_apply: true
+    network_profile_name: integration
+    firewall_rules:
+    - port: '18080'
+      protocol: tcp
+      source: 198.18.0.0/24
+      comment: degit integration
+    - port: '18081'
+      protocol: udp
+      source: 2001:db8:de61::/64
+      comment: degit IPv6 integration
+  roles:
+  - role: degitag.infrastructure.network
+  - role: degitag.infrastructure.firewall
+  tasks:
+  - name: Apply network handlers before checking interface state
+    ansible.builtin.meta: flush_handlers
+
+  - name: Inspect configured test NIC
+    ansible.builtin.command: ip -json address show {{ test_interface | default('ens19') }}
+    register: _test_nic
+    changed_when: false
+
+  - name: Assert IPv4 and IPv6 test addresses exist
+    ansible.builtin.assert:
+      that:
+      - (_test_nic.stdout | from_json)[0].addr_info | selectattr('family', 'equalto', 'inet') | list | length > 0
+      - (_test_nic.stdout | from_json)[0].addr_info | selectattr('family', 'equalto', 'inet6') | list | length > 0
+
+  - name: Query persistent UFW rules
+    ansible.builtin.command: ufw show added
+    register: _test_ufw
+    changed_when: false
+    when: ansible_facts.os_family == 'Debian'
+
+  - name: Query persistent firewalld rules
+    ansible.builtin.command: firewall-cmd --permanent --zone=public --list-rich-rules
+    register: _test_firewalld
+    changed_when: false
+    when: ansible_facts.os_family == 'RedHat'
+
+  - name: Assert both test rules exist
+    ansible.builtin.assert:
+      that:
+      - "'18080' in (_test_ufw.stdout | default('') ~ _test_firewalld.stdout | default(''))"
+      - "'18081' in (_test_ufw.stdout | default('') ~ _test_firewalld.stdout | default(''))"

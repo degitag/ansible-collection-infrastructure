@@ -7,6 +7,11 @@ argument_specs:
     options:
       proxy_env:
         description:
-        - Controls `proxy_env` for the `proxy` role.
+        - HTTP(S)/ALL_PROXY URLs and NO_PROXY bypass values. Credentials are normalized without double encoding.
         required: false
         type: dict
+      proxy_manage_pip:
+        description:
+        - Controls `proxy_manage_pip` for the `proxy` role.
+        required: false
+        type: bool

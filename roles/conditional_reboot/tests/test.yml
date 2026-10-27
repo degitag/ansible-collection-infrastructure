@@ -1,0 +1,7 @@
+---
+- name: Syntax test for conditional_reboot
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  roles:
+  - role: degitag.infrastructure.conditional_reboot

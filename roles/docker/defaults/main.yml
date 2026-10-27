@@ -12,7 +12,6 @@ docker_packages:
 - containerd.io
 - docker-buildx-plugin
 - docker-compose-plugin
-
-# Keep the default daemon configuration intentionally small and valid.
-# Operators can extend this dictionary with any supported dockerd option.
 docker_daemon_config: {}
+docker_manage_proxy: true
+docker_proxy_env: '{{ proxy_env | default({}) }}'

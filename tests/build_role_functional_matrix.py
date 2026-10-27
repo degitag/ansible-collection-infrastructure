@@ -19,9 +19,9 @@ GLOBAL_TRIGGER_PATHS = (
     ".ansible-lint",
 )
 PLATFORM_IMAGE_MAP = {
-    "Ubuntu": {"os_name": "ubuntu-22.04", "image": "ubuntu:22.04"},
-    "Debian": {"os_name": "debian-12", "image": "debian:12"},
-    "EL": {"os_name": "rocky-9", "image": "rockylinux:9"},
+    "Ubuntu": [{"os_name": "ubuntu-" + v, "image": "ubuntu:" + v} for v in ("22.04", "24.04", "26.04")],
+    "Debian": [{"os_name": "debian-13", "image": "debian:13"}],
+    "EL": [{"os_name": "rocky-9", "image": "rockylinux:9"}],
 }
 
 
@@ -64,8 +64,8 @@ def build_matrix(role_filter: str | None = None, changed_files: list[str] | None
 
     for role_dir in resolve_changed_roles(changed_files or [], role_filter):
         for platform_name in load_role_platforms(role_dir):
-            platform = PLATFORM_IMAGE_MAP[platform_name]
-            include.append(
+            for platform in PLATFORM_IMAGE_MAP[platform_name]:
+                include.append(
                 {
                     "role_name": role_dir.name,
                     "playbook": f"roles/{role_dir.name}/tests/functional.yml",

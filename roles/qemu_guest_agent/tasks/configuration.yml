@@ -1,0 +1,21 @@
+---
+- name: Install package
+  ansible.builtin.package:
+    name: '{{ qemu_guest_agent_packages }}'
+    state: present
+    policy_rc_d: "{{ 101 if ansible_facts.os_family == 'Debian' and not (qemu_guest_agent_manage_service | bool and qemu_guest_agent_service_state == 'started') else omit }}"
+  when: not ansible_facts.virtualization_type == 'lxc'
+  become: true
+  tags: qemu-guest-agent
+
+- name: Start and enable service
+  ansible.builtin.service:
+    name: '{{ qemu_guest_agent_service }}'
+    state: '{{ qemu_guest_agent_service_state }}'
+    enabled: '{{ qemu_guest_agent_service_enabled }}'
+  when:
+  - qemu_guest_agent_service is defined
+  - qemu_guest_agent_manage_service | bool
+  - not ansible_facts.virtualization_type == 'lxc'
+  become: true
+  tags: qemu-guest-agent

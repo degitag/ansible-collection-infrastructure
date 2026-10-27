@@ -1,35 +1,7 @@
 ---
-- name: Stop and disable systemd-resolved
-  ansible.builtin.service:
-    name: systemd-resolved
-    state: stopped
-    enabled: false
-  failed_when: false
-  when: resolvconf_manage_systemd_resolved | bool
-  become: true
-  tags: resolvconf
-
-- name: Check if /etc/resolvconf is a symlink to /run/systemd/resolve/resolv.conf
-  ansible.builtin.stat:
-    path: /etc/resolv.conf
-  register: resolvconf_resolv_conf
-  become: true
-  tags: resolvconf
-
-- name: Remove symlink to /etc/resolv.conf if it exists
-  ansible.builtin.file:
-    path: /etc/resolv.conf
-    state: absent
-  when: resolvconf_resolv_conf.stat.islnk
-  become: true
-  tags: resolvconf
-
-- name: Create /etc/resolv.conf
-  ansible.builtin.template:
-    src: resolv.conf.j2
-    dest: /etc/resolv.conf
-    owner: root
-    group: root
-    mode: "0644"
-  become: true
+- name: Prepare facts and platform variables
+  ansible.builtin.import_tasks: preflight.yml
+  tags: always
+- name: Apply resolvconf configuration
+  ansible.builtin.import_tasks: configuration.yml
   tags: resolvconf

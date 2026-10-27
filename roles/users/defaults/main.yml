@@ -3,34 +3,14 @@ users_defaults: []
 users_group_vars: []
 users_host_vars: []
 users_playbook: []
-users_manage_root_dotfiles: true
+users_manage_root_dotfiles: false
 users_copy_msmtp_config: true
-users_powerline_go_enabled: true
-users_powerline_go_version: "1.26"
-users_powerline_go_install_dir: "/usr/local/bin"
-users_powerline_go_binary_name: "powerline-go"
+users_powerline_go_enabled: false
+users_powerline_go_version: '1.26'
+users_powerline_go_install_dir: /usr/local/bin
+users_powerline_go_binary_name: powerline-go
 users_powerline_go_arch_map:
   x86_64: amd64
   aarch64: arm64
-users_powerline_go_checksum: ""
-
-# users_defaults:
-#   - name: "litsadmin"
-#     fullname: "LITS Admin"
-#     authorized_keys:
-#       - "{{ lookup('file', 'files/sshkeys/id_rsa_litsadmin.pub') }}"
-#     cmd: "ALL=(ALL) NOPASSWD:ALL"
-#     state: present
-#     sudo: true
-#     system_account: false
-#     bash_files:
-#       - name: ../files/bashrc/ms.sh
-#         mode: '0755'
-#       - name: ../files/bashrc/tmux.conf
-#         mode: '0644'
-#       - name: ../files/bashrc/vimrc
-#         mode: '0644'
-#       - name: ../files/bashrc/curlrc
-#         mode: '0644'
-#       - name: ../files/bashrc/wgetrc
-#         mode: '0644'
+users_powerline_go_checksum: ''
+users_groups: []

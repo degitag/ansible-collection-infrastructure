@@ -1,7 +1,0 @@
----
-sftp_server_package_name: openssh-server
-sftp_server_service_name: sshd
-sftp_server_sshd_binary: /usr/sbin/sshd
-sftp_server_nologin_shell: /sbin/nologin
-sftp_server_sshd_config_dir: /etc/ssh/sshd_config.d
-sftp_server_sshd_match_config_path: /etc/ssh/sshd_config.d/99-sftp-server.conf

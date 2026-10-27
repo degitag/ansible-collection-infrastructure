@@ -1,37 +1,7 @@
 ---
-- name: Gather operating system variables
-  ansible.builtin.include_vars: "{{ item }}"
-  with_first_found:
-  - "{{ ansible_distribution | lower }}-{{ ansible_distribution_version | lower }}.yml"
-  - "{{ ansible_distribution | lower }}-{{ ansible_distribution_major_version | lower }}.yml"
-  - "{{ ansible_distribution_file_variety | lower }}-{{ ansible_distribution_major_version | lower }}.yml"
-  - "{{ ansible_os_family | lower }}-{{ ansible_distribution_major_version | lower }}.yml"
-  - "{{ ansible_distribution | lower }}.yml"
-  - "{{ ansible_os_family | lower }}-{{ ansible_distribution_version.split('.')[0] }}.yml"
-  - "{{ ansible_os_family | lower }}.yml"
-  tags: multipath
-
-- name: Install multipath tools
-  ansible.builtin.package:
-    name: "{{ multipath_packages }}"
-    state: present
-  become: true
-  tags: multipath
-
-- name: Configure multipath
-  ansible.builtin.template:
-    src: multipath.conf.j2
-    dest: "{{ multipath_config_file }}"
-    mode: '0644'
-  notify: Restart multipath
-  become: true
-  tags: multipath
-
-- name: Enable and start multipathd service
-  ansible.builtin.service:
-    name: "{{ multipath_service }}"
-    state: "{{ multipath_service_state }}"
-    enabled: "{{ multipath_service_enabled }}"
-  become: true
-  when: multipath_manage_service | bool
+- name: Prepare facts and platform variables
+  ansible.builtin.import_tasks: preflight.yml
+  tags: always
+- name: Apply multipath configuration
+  ansible.builtin.import_tasks: configuration.yml
   tags: multipath

@@ -1,0 +1,87 @@
+---
+- name: Require owned keys for additional audit rules
+  ansible.builtin.assert:
+    that:
+    - item is match('^(-a|-A|-w)\s')
+    - item is search('(?:-k\s+|key=)degit-[A-Za-z0-9_-]{1,24}(?:\s|$)')
+    fail_msg: Additional audit rules must use an owned degit-* key; global audit policy is not reset implicitly.
+  loop: '{{ auditd_extra_rules }}'
+- name: Derive owned extra audit keys for idempotent replacement
+  ansible.builtin.set_fact:
+    _auditd_extra_keys: '{{ auditd_extra_rules | join('' '') | regex_findall(''(?:-k\s+|key=)([A-Za-z0-9_-]+)'') | unique | list }}'
+- name: Ensure package is installed
+  ansible.builtin.package:
+    name: '{{ _auditd_packages }}'
+    state: present
+    policy_rc_d: '{{ 101 if ansible_facts.os_family == ''Debian'' and not (auditd_manage_service | bool and auditd_service_state == ''started'') else omit }}'
+  become: true
+  tags: auditd
+- name: Remove legacy managed shell logging file during explicit migration
+  ansible.builtin.file:
+    path: /etc/audit/rules.d/logging.rules
+    state: absent
+  when: auditd_remove_legacy_shell_rules | bool
+  notify: Restart auditd
+  become: true
+- name: Deploy audit.rules for user session logging
+  ansible.builtin.template:
+    src: audit.rules.j2
+    dest: /etc/audit/rules.d/audit.rules
+    owner: root
+    group: root
+    mode: '0640'
+  notify: Restart auditd
+  become: true
+  tags: auditd
+- name: Ensure service is started and enabled
+  ansible.builtin.service:
+    name: '{{ _auditd_service_name }}'
+    state: '{{ auditd_service_state }}'
+    enabled: '{{ auditd_service_enabled }}'
+  become: true
+  when:
+  - auditd_manage_service | bool
+  - ansible_facts.os_family == 'Debian'
+  tags: auditd
+- name: Inspect auditd state on EL9
+  ansible.builtin.service_facts: {}
+  when: auditd_manage_service | bool and ansible_facts.os_family == 'RedHat'
+- name: Set auditd boot activation on EL9
+  ansible.builtin.systemd_service:
+    name: '{{ _auditd_service_name }}'
+    enabled: '{{ auditd_service_enabled }}'
+  when: auditd_manage_service | bool and ansible_facts.os_family == 'RedHat'
+  become: true
+- name: Control auditd through the supported EL9 service interface
+  ansible.builtin.command:
+    argv:
+    - '{{ _auditd_service_binary }}'
+    - '{{ _auditd_service_name }}'
+    - '{{ ''start'' if auditd_service_state == ''started'' else ''stop'' }}'
+  when:
+  - auditd_manage_service | bool and ansible_facts.os_family == 'RedHat'
+  - (auditd_service_state == 'started') != (ansible_facts.services.get('auditd.service', {}).get('state', '') == 'running')
+  changed_when: true
+  become: true
+- name: Read active audit rules for selective command logging cleanup
+  ansible.builtin.command:
+    argv:
+    - '{{ _auditd_auditctl_binary }}'
+    - -l
+  register: _auditd_active_rules
+  changed_when: false
+  when:
+  - not ansible_check_mode
+  - not auditd_shell_commands_enabled | bool or auditd_remove_legacy_shell_rules | bool
+  become: true
+- name: Remove only owned active command logging rules
+  ansible.builtin.command:
+    argv: '{{ [_auditd_auditctl_binary] + (item | regex_replace(''^-a '', ''-d '')).split() }}'
+  loop: '{{ _auditd_active_rules.stdout_lines | default([]) }}'
+  when:
+  - item is match('^-a always,exit -F arch=b(32|64) -S execve (-F key=|-k )(degit-user-cmd|shell_history)$')
+  - ('degit-user-cmd' in item and not auditd_shell_commands_enabled | bool) or ('shell_history' in item and auditd_remove_legacy_shell_rules | bool)
+  changed_when: true
+  become: true
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers

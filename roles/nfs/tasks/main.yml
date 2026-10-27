@@ -1,21 +1,7 @@
 ---
-- name: Gather OS specific variables
-  ansible.builtin.include_vars: "{{ item }}"
-  with_first_found:
-  - "{{ ansible_distribution | lower }}-{{ ansible_distribution_version }}.yml"
-  - "{{ ansible_distribution | lower }}-{{ ansible_distribution_major_version }}.yml"
-  - "{{ ansible_distribution | lower }}.yml"
-  - "{{ ansible_os_family | lower }}.yml"
-
-- name: Validate NFS variables
-  ansible.builtin.include_tasks: validate_variables.yml
-
-- name: Install platform-specific NFS packages
-  ansible.builtin.include_tasks: "install_packages_{{ ansible_pkg_mgr }}.yml"
-
-- import_tasks: server.yml
-  when:
-  - (nfs_exports | length > 0) or (nfs_manage_service | bool)
-
-- import_tasks: client.yml
-  when: nfs_mounts
+- name: Prepare facts and platform variables
+  ansible.builtin.import_tasks: preflight.yml
+  tags: always
+- name: Apply nfs configuration
+  ansible.builtin.import_tasks: configuration.yml
+  tags: nfs

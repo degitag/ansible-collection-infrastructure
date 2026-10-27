@@ -1,95 +1,95 @@
 ---
-- name: "Custom Vhosts | Include tasks for create certifates when user pass content instead path"
+- name: Custom Vhosts | Include tasks for create certifates when user pass content instead path
   ansible.builtin.include_tasks: create_certs_from_content.yml
   vars:
     _apache_certificate: "{{ _apache_vhost.ssl.crt | default('') }}"
-    _apache_chain: ""
+    _apache_chain: ''
     _apache_key: "{{ _apache_vhost.ssl.key | default('') }}"
-    _apache_certificate_file_name: "{{ _apache_vhost.name }}"
-    _apache_certificate_path: "{{ apache_default_vhost_ssl_certs_path }}"
+    _apache_certificate_file_name: '{{ _apache_vhost.name }}'
+    _apache_certificate_path: '{{ apache_default_vhost_ssl_certs_path }}'
   when:
   - _apache_vhost.https is defined
   - _apache_vhost.https
 
-- name: "Creating directory for {{ _apache_vhost.name }}"
+- name: Creating directory for {{ _apache_vhost.name }}
   ansible.builtin.file:
-    path: "{{ apache_vhosts_directory }}/{{ _apache_vhost.name }}"
+    path: '{{ apache_vhosts_directory }}/{{ _apache_vhost.name }}'
     state: directory
-    owner: "{{ _apache_vhost.directory_owner | default(_apache_vhosts_user) }}"
-    group: "{{ _apache_vhost.directory_group | default(_apache_vhosts_group) }}"
-    mode: 0755
+    owner: '{{ _apache_vhost.directory_owner | default(_apache_vhosts_user) }}'
+    group: '{{ _apache_vhost.directory_group | default(_apache_vhosts_group) }}'
+    mode: '0755'
   when: _apache_vhost.create_path
 
-- name: "Creating docroot for {{ _apache_vhost.name }}"
+- name: Creating docroot for {{ _apache_vhost.name }}
   ansible.builtin.file:
-    path: "{{ apache_vhosts_directory }}/{{ _apache_vhost.name }}/{{ _apache_vhost.docroot }}"
+    path: '{{ apache_vhosts_directory }}/{{ _apache_vhost.name }}/{{ _apache_vhost.docroot }}'
     state: directory
-    owner: "{{ _apache_vhosts_user }}"
-    group: "{{ _apache_vhosts_group }}"
-    mode: 0755
+    owner: '{{ _apache_vhosts_user }}'
+    group: '{{ _apache_vhosts_group }}'
+    mode: '0755'
   when: _apache_vhost.create_docroot
 
-- name: "Creating logs directory {{ _apache_vhost.name }}"
+- name: Creating logs directory {{ _apache_vhost.name }}
   ansible.builtin.file:
-    path: "{{ apache_logs_directory }}/{{ _apache_vhost.name }}"
+    path: '{{ apache_logs_directory }}/{{ _apache_vhost.name }}'
     state: directory
-    owner: "{{ _apache_vhosts_user }}"
-    group: "{{ _apache_vhosts_group }}"
-    mode: 0755
+    owner: '{{ _apache_vhosts_user }}'
+    group: '{{ _apache_vhosts_group }}'
+    mode: '0755'
 
-- name: "Creating vhost for {{ _apache_vhost.name }}"
+- name: Creating vhost for {{ _apache_vhost.name }}
   ansible.builtin.template:
     src: "{{ _apache_vhost.template | default('sites-available/vhost.j2') }}"
-    dest: "{{ _apache_vhost_conf_path }}/{{ _apache_vhost.name }}.conf"
-    mode: 0644
+    dest: '{{ _apache_vhost_conf_path }}/{{ _apache_vhost.name }}.conf'
+    mode: '0644'
   notify: Reload apache
   vars:
-    _apache_certificate_file_name: "{{ _apache_vhost.name }}"
+    _apache_certificate_file_name: '{{ _apache_vhost.name }}'
 
-- name: "Creating auth file for {{ _apache_vhost.name }}"
+- name: Creating auth file for {{ _apache_vhost.name }}
   community.general.htpasswd:
-    path: "/etc/{{ _apache_package_name }}/htpasswd/{{ _apache_vhost.auth.file }}"
-    name: "{{ _apache_vhost.auth.username }}"
-    password: "{{ _apache_vhost.auth.password }}"
-    owner: "{{ _apache_user }}"
-    group: "{{ _apache_vhosts_group }}"
-    mode: 0640
+    path: /etc/{{ _apache_package_name }}/htpasswd/{{ _apache_vhost.auth.file }}
+    name: '{{ _apache_vhost.auth.username }}'
+    password: '{{ _apache_vhost.auth.password }}'
+    owner: '{{ _apache_user }}'
+    group: '{{ _apache_vhosts_group }}'
+    mode: '0640'
   when: _apache_vhost.auth.file is defined
   notify: Reload apache
 
-- name: "Add maintenance page"
+- name: Add maintenance page
   ansible.builtin.template:
-    src: "{{ _apache_vhost.maintenance.template.src | default(apache_default_maintenance_template) }}"
-    dest: "{{ apache_vhosts_directory }}/maintenance/{{ _apache_vhost.name }}.html"
-    owner: "{{ _apache_vhosts_user }}"
-    group: "{{ _apache_vhosts_group }}"
-    mode: 0640
+    src: '{{ _apache_vhost.maintenance.template.src | default(apache_default_maintenance_template) }}'
+    dest: '{{ apache_vhosts_directory }}/maintenance/{{ _apache_vhost.name }}.html'
+    owner: '{{ _apache_vhosts_user }}'
+    group: '{{ _apache_vhosts_group }}'
+    mode: '0640'
   when:
   - _apache_vhost.maintenance.enable is defined and _apache_vhost.maintenance.enable
   - _apache_vhost.maintenance.template.managed is defined and _apache_vhost.maintenance.template.managed
 
-- name: "Enabling vhost {{ _apache_vhost.name }}"
+- name: Enabling vhost {{ _apache_vhost.name }}
   ansible.builtin.file:
-    src: "{{ _apache_vhost_conf_path }}/{{ _apache_vhost.name }}.conf"
-    dest: "/etc/apache2/sites-enabled/{{ _apache_vhost.name }}.conf"
+    src: '{{ _apache_vhost_conf_path }}/{{ _apache_vhost.name }}.conf'
+    dest: /etc/apache2/sites-enabled/{{ _apache_vhost.name }}.conf
     state: link
   when:
   - _apache_vhost.state is not defined or _apache_vhost.state == "present"
   - _ansible_os_family == "debian"
   notify: Reload apache
 
-- name: "Disabling _apache_vhost in {{ _ansible_os_family }}"
+- name: Disabling _apache_vhost in {{ _ansible_os_family }}
   ansible.builtin.file:
-    path: "/etc/apache2/sites-enabled/{{ _apache_vhost.name }}.conf"
+    path: /etc/apache2/sites-enabled/{{ _apache_vhost.name }}.conf
     state: absent
   when:
   - _apache_vhost.state is defined and _apache_vhost.state == 'absent'
   - _ansible_os_family == "debian"
   notify: Reload apache
 
-- name: "Disabling _apache_vhost in {{ _ansible_os_family }}"
+- name: Disabling _apache_vhost in {{ _ansible_os_family }}
   ansible.builtin.file:
-    path: "{{ _apache_vhost_conf_path }}/{{ _apache_vhost.name }}.conf"
+    path: '{{ _apache_vhost_conf_path }}/{{ _apache_vhost.name }}.conf'
     state: absent
   when:
   - _apache_vhost.state is defined and _apache_vhost.state == 'absent'

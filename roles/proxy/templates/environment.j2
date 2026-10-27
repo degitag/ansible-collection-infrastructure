@@ -1,14 +1,6 @@
 {{ ansible_managed | comment }}
-
-{% if proxy_env.http_proxy is defined and proxy_env.http_proxy != '' %}
-http_proxy="{{ proxy_env.http_proxy }}"
-HTTP_PROXY="{{ proxy_env.http_proxy }}"
+{% for key, value in proxy_environment.items() %}
+{% if value | length > 0 %}
+{{ key }}={{ value | to_json }}
 {% endif %}
-{% if proxy_env.https_proxy is defined and proxy_env.https_proxy != '' %}
-https_proxy="{{ proxy_env.https_proxy }}"
-HTTPS_PROXY="{{ proxy_env.https_proxy }}"
-{% endif %}
-{% if proxy_env.no_proxy is defined and proxy_env.no_proxy != '' %}
-no_proxy="{{ proxy_env.no_proxy }}"
-NO_PROXY="{{ proxy_env.no_proxy }}"
-{% endif %}
+{% endfor %}

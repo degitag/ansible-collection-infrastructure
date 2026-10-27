@@ -11,6 +11,10 @@ from typing import Any
 
 import yaml
 from ruamel.yaml import YAML
+try:
+    from tools.format_yaml import quote_ambiguous_strings
+except ModuleNotFoundError:
+    from format_yaml import quote_ambiguous_strings
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -29,7 +33,7 @@ def yaml_dump(data: Any) -> str:
     formatter.width = 1000
 
     buffer = io.StringIO()
-    formatter.dump(data, buffer)
+    formatter.dump(quote_ambiguous_strings(deepcopy(data)), buffer)
     return buffer.getvalue()
 
 
@@ -133,6 +137,7 @@ def get_example_playbook(config: dict[str, Any], role_name: str) -> str:
     return f"""- name: Apply {role_name}
   hosts: all
   become: true
+  gather_facts: true
   roles:
     - role: {collection}.{role_name}"""
 
@@ -155,7 +160,7 @@ def build_meta_main(config: dict[str, Any], role_name: str, description: str) ->
         "galaxy_info": {
             "author": "Dominik Lenhardt",
             "description": description,
-            "license": "MIT",
+            "license": config.get("role_licenses", {}).get(role_name, "MIT"),
             "min_ansible_version": config["min_ansible_version"],
             "platforms": [
                 {
@@ -171,7 +176,7 @@ def build_meta_main(config: dict[str, Any], role_name: str, description: str) ->
     return yaml_dump(data)
 
 
-def build_argument_specs(role_name: str, defaults: Any) -> str:
+def build_argument_specs(role_name: str, defaults: Any, config: dict[str, Any] | None = None) -> str:
     options: dict[str, Any] = {}
     if isinstance(defaults, dict):
         for variable_name, value in defaults.items():
@@ -183,6 +188,10 @@ def build_argument_specs(role_name: str, defaults: Any) -> str:
             elements = infer_elements_from_defaults(value, defaults)
             if elements:
                 entry["elements"] = elements
+            if variable_name.endswith(("_password", "_passphrase", "_token", "_secret", "_api_key", "_user_key", "_private_key")) or variable_name in {"msmtp_accounts", "k3s_platform_apps_runtime_env"}:
+                entry["no_log"] = True
+            overrides = (config or {}).get("role_argument_overrides", {}).get(role_name, {})
+            entry.update(overrides.get(variable_name, {}))
             options[variable_name] = entry
 
     data = {
@@ -209,6 +218,15 @@ def build_role_readme(config: dict[str, Any], role_name: str, description: str, 
 
 {format_platform_list(platforms)}
 
+## Architecture and operation
+
+Facts are collected at entry only when the required platform facts are missing.
+`tasks/preflight.yml` rejects unsupported releases before making changes and loads
+family, distribution and release variables from `vars/platform/` in that order.
+Public inputs belong in `defaults/main.yml`; platform internals belong in `vars/`.
+
+{config.get('role_notes', {}).get(role_name, 'Run this role only on hosts assigned to its responsibility. Review the defaults and required inputs before rollout.')}
+
 ## Role Variables
 
 The role interface is validated through `meta/argument_specs.yml`. Defaults are defined in `defaults/main.yml`.
@@ -222,7 +240,25 @@ The role interface is validated through `meta/argument_specs.yml`. Defaults are 
 
 ## Testing
 
-The collection CI runs `ansible-lint`, `ansible-test sanity`, repository consistency tests, and per-role syntax checks using `roles/{role_name}/tests/test.yml`.
+Build and install the current collection checkout before running syntax checks, so the
+fully qualified role reference resolves to this implementation.
+
+Run `python tools/generate_role_scaffold.py --check`, `pytest tests/unit` and
+`bash tests/run_role_syntax_checks.sh` from the collection root.
+CI additionally runs YAML lint, Ansible lint, collection build/install and container smoke tests.
+VM functional results are tracked separately; metadata lists intended compatibility,
+not proof that every feature has passed on every distribution.
+
+## Dependencies
+
+Install the collection dependencies from `requirements.yml`. Role dependencies:
+`{get_role_dependencies(config, role_name)}`.
+
+## Change management
+
+Use check mode where the underlying modules support it. Review the diff before applying
+changes. Network, firewall, identity and storage changes need an out-of-band recovery
+path. Secrets belong in Ansible Vault or the operator secret store, never in defaults.
 """
 
 
@@ -233,20 +269,77 @@ def build_role_test_playbook(config: dict[str, Any], role_name: str) -> str:
   connection: local
   gather_facts: true
   roles:
-  - role: ..
+  - role: {config["collection_namespace"]}.{config["collection_name"]}.{role_name}
 """
+
+
+def build_preflight(config: dict[str, Any], role_name: str) -> str:
+    names = {item["name"] for item in get_platforms(config, role_name)}
+    conditions = []
+    if "Debian" in names:
+        conditions.append("(ansible_facts['distribution'] == 'Debian' and ansible_facts['distribution_major_version'] == '13')")
+    if "Ubuntu" in names:
+        conditions.append("(ansible_facts['distribution'] == 'Ubuntu' and ansible_facts['distribution_version'] in ['22.04', '24.04', '26.04'])")
+    if "EL" in names:
+        conditions.append("(ansible_facts['distribution'] in ['Rocky', 'RedHat'] and ansible_facts['distribution_major_version'] == '9')")
+    required = {"distribution", "distribution_version", "distribution_major_version", "os_family", "architecture"}
+    for path in (ROLES_DIR / role_name).rglob("*"):
+        if path.is_file() and path.suffix in {".yml", ".j2"} and path.name != "preflight.yml":
+            required.update(re.findall(r"ansible_facts\.([A-Za-z_][A-Za-z_0-9]*)", path.read_text(encoding="utf-8")))
+            required.update(re.findall(r'ansible_facts\[[\'"]([A-Za-z_][A-Za-z_0-9]*)[\'"]\]', path.read_text(encoding="utf-8")))
+    if required.intersection({"default_ipv4", "default_ipv6"}):
+        required.difference_update({"default_ipv4", "default_ipv6"})
+        required.add("interfaces")
+    required.discard("services")  # Service facts have their own explicit task where needed.
+    required.difference_update({"get", "keys", "items", "values"})  # Mapping methods are not facts.
+    condition = str(sorted(required)) + " | difference(ansible_facts.keys()) | length > 0"
+    tasks = [
+        {"name": "Collect missing platform facts", "ansible.builtin.setup": {},
+         "when": condition},
+        {"name": "Validate the supported operating system release", "ansible.builtin.assert": {
+            "that": [" or ".join(conditions) or "false"],
+            "fail_msg": f"Unsupported operating system for {role_name}. See the role README for supported releases.",
+            "quiet": True}},
+        {"name": "Load family platform variables", "ansible.builtin.include_vars": {
+            "file": "{{ role_path }}/vars/platform/{{ ansible_facts['os_family'] }}.yml"}},
+        {"name": "Load distribution platform variables", "ansible.builtin.include_vars": {
+            "file": "{{ role_path }}/vars/platform/{{ ansible_facts['distribution'] }}.yml"},
+            "when": "ansible_facts['distribution'] != ansible_facts['os_family']"},
+        {"name": "Load release platform variables", "ansible.builtin.include_vars": "{{ item }}",
+         "with_first_found": [{"files": ["{{ ansible_facts['distribution'] }}-{{ ansible_facts['distribution_version'] }}.yml", "{{ ansible_facts['distribution'] }}-{{ ansible_facts['distribution_major_version'] }}.yml"],
+                               "paths": ["{{ role_path }}/vars/platform"]}]},
+    ]
+    return yaml_dump(tasks)
 
 
 def build_role_files(config: dict[str, Any], role_dir: Path) -> dict[Path, str]:
     role_name = role_dir.name
     description = config["role_descriptions"].get(role_name, f"Manage {role_name} configuration.")
     defaults = load_yaml(role_dir / "defaults" / "main.yml")
-    return {
+    files = {
+        role_dir / "tasks" / "main.yml": yaml_dump([
+            {"name": "Prepare facts and platform variables", "ansible.builtin.import_tasks": "preflight.yml", "tags": "always"},
+            {"name": "Apply " + role_name + " configuration", "ansible.builtin.import_tasks": "configuration.yml", "tags": role_name},
+        ]),
+        role_dir / "tasks" / "preflight.yml": build_preflight(config, role_name),
         role_dir / "README.md": build_role_readme(config, role_name, description, defaults),
         role_dir / "meta" / "main.yml": build_meta_main(config, role_name, description),
-        role_dir / "meta" / "argument_specs.yml": build_argument_specs(role_name, defaults),
+        role_dir / "meta" / "argument_specs.yml": build_argument_specs(role_name, defaults, config),
         role_dir / "tests" / "test.yml": build_role_test_playbook(config, role_name),
     }
+    for relative, initial in (("defaults/main.yml", {}), ("tasks/configuration.yml", [])):
+        path = role_dir / relative
+        if not path.exists():
+            files[path] = yaml_dump(initial)
+    for family in ("Debian", "RedHat", "Ubuntu", "Rocky"):
+        path = role_dir / "vars" / "platform" / (family + ".yml")
+        if not path.exists():
+            files[path] = yaml_dump({})
+    for distro, version in (("Debian", "13"), ("Ubuntu", "22.04"), ("Ubuntu", "24.04"), ("Ubuntu", "26.04"), ("Rocky", "9"), ("RedHat", "9")):
+        path = role_dir / "vars" / "platform" / f"{distro}-{version}.yml"
+        if not path.exists():
+            files[path] = yaml_dump({})
+    return files
 
 
 def iter_role_dirs() -> list[Path]:

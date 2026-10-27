@@ -14,7 +14,7 @@ def render_msmtprc(context: dict) -> str:
     environment.filters["comment"] = lambda value: f"# {value}"
     environment.filters["bool"] = bool
     template = environment.get_template("msmtprc.j2")
-    return template.render(**context)
+    return template.render(**{**context, "ansible_facts": {key.removeprefix("ansible_"): value for key, value in context.items() if key.startswith("ansible_")}})
 
 
 def test_msmtprc_uses_auth_off_without_credentials() -> None:

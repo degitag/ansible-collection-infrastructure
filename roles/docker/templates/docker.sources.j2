@@ -2,5 +2,5 @@ Types: deb
 URIs: {{ docker_apt_repository_url }}
 Suites: {{ docker_apt_repository_suite }}
 Components: stable
-Architectures: {{ docker_apt_architecture_map[ansible_architecture] }}
+Architectures: {{ docker_apt_architecture_map[ansible_facts.architecture] }}
 Signed-By: {{ docker_apt_keyring_path }}

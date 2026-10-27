@@ -85,3 +85,8 @@ argument_specs:
         - Controls `sshd_server_match_blocks` for the `sshd` role.
         required: false
         type: list
+      sshd_disable_socket_activation:
+        description:
+        - Controls `sshd_disable_socket_activation` for the `sshd` role.
+        required: false
+        type: bool

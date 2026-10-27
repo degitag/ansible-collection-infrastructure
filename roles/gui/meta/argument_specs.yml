@@ -3,25 +3,20 @@ argument_specs:
   main:
     short_description: Entry point for the gui role.
     description:
-      - Install a graphical desktop environment and set the graphical systemd target.
+    - Validate variables for the `gui` role.
     options:
       gui_enabled:
+        description:
+        - Controls `gui_enabled` for the `gui` role.
+        required: false
         type: bool
-        default: false
-      gui_redhat_group_name:
-        type: str
-        default: "Server with GUI"
-      gui_redhat_packages:
+      gui_extra_packages:
+        description:
+        - Controls `gui_extra_packages` for the `gui` role.
+        required: false
         type: list
-        elements: str
-        default:
-          - firefox
-      gui_debian_packages:
-        type: list
-        elements: str
-        default:
-          - task-xfce-desktop
-          - firefox-esr
       gui_default_target:
+        description:
+        - Controls `gui_default_target` for the `gui` role.
+        required: false
         type: str
-        default: graphical.target

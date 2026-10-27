@@ -3,7 +3,7 @@
 borgmatic_manage_packages: true
 borgmatic_package_state: present
 borgmatic_install_method: uv
-borgmatic_version: "2.0.11"
+borgmatic_version: 2.1.10
 
 # Konfigurations- und Laufzeitpfade
 borgmatic_config_dir: /etc/borgmatic
@@ -17,7 +17,7 @@ borgmatic_manage_local_repositories: true
 borgmatic_manage_timer: false
 borgmatic_timer_enabled: true
 borgmatic_timer_state: started
-borgmatic_timer_on_calendar: "*-*-* 03:17:00"
+borgmatic_timer_on_calendar: '*-*-* 03:17:00'
 borgmatic_timer_randomized_delay_sec: 30m
 borgmatic_timer_persistent: true
 
@@ -43,3 +43,6 @@ borgmatic_config:
   - name: repository
   - name: archives
     frequency: 2 weeks
+borgmatic_manage_epel: true
+borgmatic_uv_version: 0.13.1
+borgmatic_uv_installer_checksum: sha256:7c482d409673a53f4d9bd34ae95c9166be3b8d89ca82f27dd7bca3cab457afff

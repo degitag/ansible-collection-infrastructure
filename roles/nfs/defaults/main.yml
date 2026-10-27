@@ -1,7 +1,7 @@
 ---
 # defaults file for lae.nfs
 nfs_manage_service: true
-nfs_service_enabled: "{{ nfs_exports | bool }}"
+nfs_service_enabled: "{{ nfs_exports | length > 0 }}"
 nfs_service_state: "{{ 'started' if nfs_exports else 'stopped' }}"
 nfs_exports: []
 nfs_mounts: []

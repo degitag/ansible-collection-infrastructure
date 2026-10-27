@@ -1,0 +1,7 @@
+---
+- name: Syntax test for network
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  roles:
+  - role: degitag.infrastructure.network

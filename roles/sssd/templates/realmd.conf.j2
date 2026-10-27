@@ -5,8 +5,8 @@ default-home = /home/%d/%U
 default-shell = /bin/bash
 [active-directory]
 default-client = sssd
-os-name = {{ ansible_distribution }} Server
-os-version = {{ ansible_distribution_version }}
+os-name = {{ ansible_facts.distribution }} Server
+os-version = {{ ansible_facts.distribution_version }}
 [service]
 automatic-install = no
 [domain.{{ sssd_domain_name }}]

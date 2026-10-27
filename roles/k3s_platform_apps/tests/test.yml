@@ -1,7 +1,0 @@
----
-- name: Syntax test for k3s_platform_apps
-  hosts: localhost
-  connection: local
-  gather_facts: true
-  roles:
-  - role: ..

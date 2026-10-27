@@ -1,0 +1,6 @@
+---
+_gui_packages:
+- 'xfce4'
+- 'xorg'
+- 'lightdm'
+- 'firefox'

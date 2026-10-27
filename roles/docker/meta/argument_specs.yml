@@ -51,3 +51,13 @@ argument_specs:
         - Controls `docker_daemon_config` for the `docker` role.
         required: false
         type: dict
+      docker_manage_proxy:
+        description:
+        - Controls `docker_manage_proxy` for the `docker` role.
+        required: false
+        type: bool
+      docker_proxy_env:
+        description:
+        - HTTP(S)/ALL_PROXY URLs and NO_PROXY bypass values. Credentials are normalized without double encoding.
+        required: false
+        type: dict

@@ -10,12 +10,6 @@ argument_specs:
         - Controls `unattended_updates_updates_cache_valid_time` for the `unattended_updates` role.
         required: false
         type: int
-      unattended_updates_origins_patterns:
-        description:
-        - Controls `unattended_updates_origins_patterns` for the `unattended_updates` role.
-        required: false
-        type: list
-        elements: str
       unattended_updates_package_blacklist:
         description:
         - Controls `unattended_updates_package_blacklist` for the `unattended_updates` role.

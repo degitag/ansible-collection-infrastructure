@@ -1,0 +1,8 @@
+---
+ca_path: /etc/pki/ca-trust/source/anchors
+ca_update: update-ca-trust
+ca_package:
+- ca-certificates
+- openssl
+_ca_trust_bundle: /etc/pki/tls/certs/ca-bundle.crt
+_ca_openssl_binary: /usr/bin/openssl

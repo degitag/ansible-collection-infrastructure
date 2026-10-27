@@ -1,9 +1,4 @@
 ---
 gui_enabled: false
-gui_redhat_group_name: "Server with GUI"
-gui_redhat_packages:
-  - firefox
-gui_debian_packages:
-  - task-xfce-desktop
-  - firefox-esr
+gui_extra_packages: []
 gui_default_target: graphical.target

@@ -1,0 +1,12 @@
+---
+certbot_packages_base:
+- certbot
+- python3-pip
+
+certbot_dns_provider_packages:
+  cloudflare:
+  - python3-certbot-dns-cloudflare
+  hetzner: []
+certbot_package_manager: dnf
+certbot_update_cache: false
+certbot_enable_epel: true

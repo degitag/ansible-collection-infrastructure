@@ -71,6 +71,16 @@ argument_specs:
         - Controls `telegraf_gpg_key_url` for the `telegraf` role.
         required: false
         type: str
+      telegraf_apt_keyring_path:
+        description:
+        - Controls `telegraf_apt_keyring_path` for the `telegraf` role.
+        required: false
+        type: str
+      telegraf_apt_key_download_path:
+        description:
+        - Controls `telegraf_apt_key_download_path` for the `telegraf` role.
+        required: false
+        type: str
       telegraf_config_path:
         description:
         - Controls `telegraf_config_path` for the `telegraf` role.
@@ -101,25 +111,21 @@ argument_specs:
         - Controls `telegraf_extra_groups` for the `telegraf` role.
         required: false
         type: list
-        elements: str
       telegraf_extra_groups_group_vars:
         description:
         - Controls `telegraf_extra_groups_group_vars` for the `telegraf` role.
         required: false
         type: list
-        elements: str
       telegraf_extra_groups_host_vars:
         description:
         - Controls `telegraf_extra_groups_host_vars` for the `telegraf` role.
         required: false
         type: list
-        elements: str
       telegraf_extra_groups_playbook:
         description:
         - Controls `telegraf_extra_groups_playbook` for the `telegraf` role.
         required: false
         type: list
-        elements: str
       telegraf_plugins:
         description:
         - Controls `telegraf_plugins` for the `telegraf` role.
@@ -145,6 +151,7 @@ argument_specs:
         - Controls `telegraf_plugin_files` for the `telegraf` role.
         required: false
         type: list
+        elements: dict
       telegraf_plugin_files_group_vars:
         description:
         - Controls `telegraf_plugin_files_group_vars` for the `telegraf` role.

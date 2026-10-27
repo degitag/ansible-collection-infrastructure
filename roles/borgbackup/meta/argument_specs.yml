@@ -31,6 +31,7 @@ argument_specs:
         - Controls `borgbackup_encryption_passphrase` for the `borgbackup` role.
         required: false
         type: str
+        no_log: true
       borgbackup_keep_daily:
         description:
         - Controls `borgbackup_keep_daily` for the `borgbackup` role.
@@ -61,3 +62,18 @@ argument_specs:
         - Controls `borgbackup_cron_hour` for the `borgbackup` role.
         required: false
         type: str
+      borgbackup_manage_epel:
+        description:
+        - Controls `borgbackup_manage_epel` for the `borgbackup` role.
+        required: false
+        type: bool
+      borgbackup_manage_repository:
+        description:
+        - Controls `borgbackup_manage_repository` for the `borgbackup` role.
+        required: false
+        type: bool
+      borgbackup_manage_cron:
+        description:
+        - Controls `borgbackup_manage_cron` for the `borgbackup` role.
+        required: false
+        type: bool

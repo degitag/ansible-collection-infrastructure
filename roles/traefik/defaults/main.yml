@@ -1,8 +1,8 @@
 ---
 proxy_env: {}
-traefik_version: 2.10.5
+traefik_version: 3.7.15
 traefik_binary_install_dir: /usr/local/bin
-traefik_binary_path: "{{ traefik_binary_install_dir }}/traefik"
+traefik_binary_path: '{{ traefik_binary_install_dir }}/traefik'
 traefik_limit_nofile: 16384
 traefik_service_name: traefik
 traefik_manage_service: true
@@ -14,18 +14,18 @@ traefik_manage_selinux: true
 traefik_firewall_ports:
 - 80/tcp
 - 443/tcp
-traefik_selinux_ports: "{{ traefik_firewall_ports }}"
+traefik_selinux_ports: '{{ traefik_firewall_ports }}'
 traefik_user: traefik
 traefik_group: traefik
-traefik_external_domain: ""
-traefik_acme_email: ""
-traefik_http_proxy: ""
-traefik_https_proxy: ""
+traefik_external_domain: ''
+traefik_acme_email: ''
+traefik_http_proxy: ''
+traefik_https_proxy: ''
 traefik_rules_files: []
 traefik_custom_cert_files: []
 traefik_config:
   global:
-    checkNewVersion: true
+    checkNewVersion: false
     sendAnonymousUsage: false
   api:
     insecure: false
@@ -34,9 +34,9 @@ traefik_config:
     level: WARN
   entryPoints:
     http:
-      address: ":80"
+      address: :80
     https:
-      address: ":443"
+      address: :443
   providers:
     file:
       directory: /etc/traefik/rules

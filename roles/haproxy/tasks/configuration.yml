@@ -1,0 +1,160 @@
+---
+- name: Validate supported platform
+  ansible.builtin.assert:
+    that:
+    - ansible_facts.os_family in ["Debian", "RedHat"]
+    fail_msg: The haproxy role supports Debian and RedHat families only.
+  tags: haproxy
+
+- name: Install SELinux tooling for haproxy
+  ansible.builtin.package:
+    name: '{{ haproxy_selinux_packages }}'
+    state: present
+    policy_rc_d: "{{ 101 if ansible_facts.os_family == 'Debian' and not (haproxy_manage_service | bool and haproxy_service_state == 'started') else omit }}"
+  when:
+  - ansible_facts.os_family == "RedHat"
+  - haproxy_manage_selinux | bool
+  - ansible_facts.selinux is defined
+  - ansible_facts.selinux.status == "enabled"
+  become: true
+  tags: haproxy
+
+- name: Install haproxy package
+  ansible.builtin.package:
+    name: '{{ haproxy_package_name }}'
+    state: present
+    policy_rc_d: "{{ 101 if ansible_facts.os_family == 'Debian' and not (haproxy_manage_service | bool and haproxy_service_state == 'started') else omit }}"
+  become: true
+  tags: haproxy
+
+- name: Ensure haproxy certificate directory exists
+  ansible.builtin.file:
+    path: '{{ haproxy_server_tls_certs_dir }}'
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+  tags: haproxy
+
+- name: Read fullchain certificates
+  ansible.builtin.slurp:
+    src: /etc/letsencrypt/live/{{ item }}/fullchain.pem
+  loop: '{{ haproxy_server_fqdns }}'
+  register: __haproxy_fullchain
+  when:
+  - haproxy_manage_letsencrypt_certs | bool
+  - haproxy_server_fqdns | length > 0
+  become: true
+  tags: haproxy
+
+- name: Read private keys
+  ansible.builtin.slurp:
+    src: /etc/letsencrypt/live/{{ item }}/privkey.pem
+  loop: '{{ haproxy_server_fqdns }}'
+  register: __haproxy_privkey
+  when:
+  - haproxy_manage_letsencrypt_certs | bool
+  - haproxy_server_fqdns | length > 0
+  become: true
+  tags: haproxy
+
+- name: Build TLS PEM bundle map
+  ansible.builtin.set_fact:
+    __haproxy_cert_map: "{{ __haproxy_cert_map | default({}) | combine({item.item: {'fullchain': item.content | b64decode}}) }}"
+  loop: '{{ __haproxy_fullchain.results | default([]) }}'
+  when: haproxy_manage_letsencrypt_certs | bool
+  tags: haproxy
+
+- name: Add private keys to TLS PEM bundle map
+  ansible.builtin.set_fact:
+    __haproxy_cert_map: "{{ __haproxy_cert_map | default({}) | combine({item.item: (__haproxy_cert_map[item.item] | default({})) | combine({'privkey': item.content | b64decode})}, recursive=True) }}"
+  loop: '{{ __haproxy_privkey.results | default([]) }}'
+  when: haproxy_manage_letsencrypt_certs | bool
+  tags: haproxy
+
+- name: Write combined haproxy PEM files
+  ansible.builtin.copy:
+    content: '{{ item.value.fullchain }}{{ item.value.privkey }}'
+    dest: '{{ haproxy_server_tls_certs_dir }}/{{ item.key }}.pem'
+    owner: root
+    group: root
+    mode: '0600'
+  loop: '{{ (__haproxy_cert_map | default({})) | dict2items }}'
+  when:
+  - haproxy_manage_letsencrypt_certs | bool
+  - item.value.fullchain is defined
+  - item.value.privkey is defined
+  notify: Restart haproxy
+  become: true
+  tags: haproxy
+
+- name: Build certificate list
+  ansible.builtin.copy:
+    content: |
+      {% for fqdn in haproxy_server_fqdns %}
+      {{ haproxy_server_tls_certs_dir }}/{{ fqdn }}.pem
+      {% endfor %}
+    dest: '{{ haproxy_server_tls_crt_list_path }}'
+    owner: root
+    group: root
+    mode: '0644'
+  when: haproxy_server_fqdns | length > 0
+  notify: Restart haproxy
+  become: true
+  tags: haproxy
+
+- name: Configure haproxy
+  ansible.builtin.template:
+    src: haproxy.cfg.j2
+    dest: /etc/haproxy/haproxy.cfg
+    owner: root
+    group: root
+    mode: '0644'
+    validate: haproxy -c -f %s
+  notify: Restart haproxy
+  become: true
+  tags: haproxy
+
+- name: Manage haproxy ports through the firewall role
+  ansible.builtin.include_role:
+    name: degitag.infrastructure.firewall
+    apply:
+      tags: haproxy
+  vars:
+    firewall_manage_activation: false
+    firewall_rules:
+    - port: "{{ _haproxy_firewall_port.split('/')[0] }}"
+      protocol: "{{ _haproxy_firewall_port.split('/')[1] }}"
+      action: allow
+      comment: HAProxy
+      zone: '{{ haproxy_firewall_zone | default("public") }}'
+  loop: '{{ haproxy_firewall_ports }}'
+  loop_control:
+    loop_var: _haproxy_firewall_port
+  when:
+  - haproxy_manage_firewall | bool
+  tags: haproxy
+- name: Allow haproxy ports in SELinux
+  community.general.seport:
+    ports: "{{ item.split('/')[0] }}"
+    proto: "{{ item.split('/')[1] }}"
+    setype: '{{ haproxy_selinux_port_type }}'
+    state: present
+  loop: '{{ haproxy_selinux_ports }}'
+  when:
+  - ansible_facts.os_family == "RedHat"
+  - haproxy_manage_selinux | bool
+  - ansible_facts.selinux is defined
+  - ansible_facts.selinux.status == "enabled"
+  become: true
+  tags: haproxy
+
+- name: Ensure haproxy service is running
+  ansible.builtin.service:
+    name: '{{ haproxy_service_name }}'
+    enabled: '{{ haproxy_service_enabled }}'
+    state: '{{ haproxy_service_state }}'
+  when: haproxy_manage_service | bool
+  become: true
+  tags: haproxy

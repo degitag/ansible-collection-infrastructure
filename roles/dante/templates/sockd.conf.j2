@@ -1,8 +1,8 @@
 {{ ansible_managed | comment }}
 
 logoutput: stderr {{ dante_log_directory }}/access.log
-internal.protocol: ipv4{% if dante_enable_ipv6 %} ipv6{% endif %}
-external.protocol: ipv4{% if dante_enable_ipv6 %} ipv6{% endif %}
+internal.protocol: ipv4{{ ' ipv6' if dante_enable_ipv6 else '' }}
+external.protocol: ipv4{{ ' ipv6' if dante_enable_ipv6 else '' }}
 
 internal: {{ dante_listen_address }} port = {{ dante_listen_port }}
 {% if dante_enable_ipv6 %}

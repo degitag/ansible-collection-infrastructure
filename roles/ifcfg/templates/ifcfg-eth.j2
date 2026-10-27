@@ -1,8 +1,0 @@
-{{ ansible_managed | comment }}
-
-# Configuration for {{ item.device }}
-{% for key, value in item.items() %}
-{% if key != 'device' %}
-{{ key.upper() }}={{ value }}
-{% endif %}
-{% endfor %}

@@ -1,334 +1,129 @@
 # AGENTS.md
 
-Dieses Repository enthaelt die Ansible Collection `onkeldom.default_server`.
+Dieses Repository pflegt die Ansible Collection `degitag.infrastructure`. Dokumentation und Architekturentscheidungen werden aus Sicht eines DevOps- und Systemarchitektur-Teams geschrieben. In Anleitungen `vim` verwenden.
 
-Das Ziel dieses Dokuments ist nicht nur Stil vorzugeben, sondern eine belastbare Arbeitsdefinition fuer den gesamten Rollenbestand festzulegen. Es beschreibt, wie wir Rollen einordnen, aendern, reviewen, testen und bei Plattformunterschieden stabil halten.
+## Verantwortungsgrenze
 
-## Leitbild
+Die Collection verwaltet Linux-Betriebssysteme, Baseline, allgemeine Dienste und Host-Integrationen. Die sieben `k3s_*`-Rollen liegen im separaten Repository `ansible-collection-k3s` unter `degitag.k3s`. Kubernetes-Anwendungen, Datenmigrationen und Proxmox-Cluster-Backups gehoeren nicht zur Host-Baseline.
 
-- Jede Rolle hat einen klaren Infrastrukturzweck und keine versteckte Seiteneffekte ausserhalb ihres Verantwortungsbereichs.
-- Jede Rolle ist fuer Ubuntu 22.04+, Debian 12+ und RHEL 9+ entweder explizit unterstuetzt oder explizit ausgeschlossen.
-- Plattformlogik wird bewusst modelliert, nicht implizit durch zufaellig funktionierende Paketnamen oder Pfade.
-- Defaults muessen fuer Operatoren lesbar, sicher und ohne nicht dokumentierte Fremdvariablen nutzbar sein.
-- Die Collection wird aus Sicht eines DevOps- und Systemarchitektur-Teams betrieben: reproduzierbar, validierbar, idempotent und wartbar.
+Bestehende uncommittete Aenderungen erhalten. Keine produktiven Deployments, Datenmigrationen oder Repository-Transfers aus einer Refactoring- oder Validierungsaufgabe ableiten. Dedizierte Testgaeste duerfen im ausdruecklich freigegebenen Testumfang verwendet werden.
 
-## Repo-Ziele
+## Support-Matrix
 
-- Rollen fuer Ubuntu 22.04+, Debian 12+ und RHEL 9+ konsistent halten.
-- Neue Rollen nur mit sauberem Standard-Geruest aufnehmen.
-- Lokale Checks auf macOS reproduzierbar halten.
-- Unterschiede zwischen Paketmanagern, Firewalls, Netzstacks und Service-Layouts architektonisch sauber kapseln.
+- Debian 13
+- Ubuntu 22.04, 24.04 und 26.04
+- Rocky Linux 9 und RHEL 9
 
-## Rollen-Vertrag
+Metadaten, README, Variablen und Preflight muessen dieselbe Matrix beschreiben. RHEL setzt zugaengliche, abonnierte Basis-Repositories voraus. Ein Rocky-Test ist kein echter RHEL-Test.
 
-Jede neue oder geaenderte Rolle muss diese Minimalanforderungen erfuellen:
+Familiengebundene Rollen bleiben bewusst eingegrenzt:
 
-- `README.md` pro Rolle
-- `meta/main.yml`
-- `meta/argument_specs.yml`
-- `tests/test.yml`
-- Plattform-Support explizit dokumentieren
-- keine impliziten Distribution-Annahmen ohne `assert`, fruehes `when` oder OS-spezifische `vars/`
-- Defaults ohne Secrets
-- idempotente Tasks
-- nachvollziehbare Service-Steuerung
-- `meta/argument_specs.yml` ist der verbindliche Variablenvertrag der Rolle und sichert die oeffentliche API gegen ungueltige oder unvollstaendige Eingaben ab
+- Debian/Ubuntu: `apt_repos`, `systemd_resolved`, `systemd_timesyncd`, `unattended_updates`.
+- Rocky/RHEL: `dnf_repos`, `dnf_automatic`.
 
-## Rollen-Standard
-
-- Neue Rollen sollen moeglichst `ansible.builtin.*` verwenden.
-- Paketnamen, Pfade, Service-Namen, Validator-Binaries und Repo-URLs gehoeren in `vars/`.
-- Rollen mit Diensten validieren Konfiguration vor Restart oder Enable, wenn ein Validator verfuegbar ist.
-- Rollen mit Netzwerk- oder Firewall-Eingriffen brauchen offensichtliche Schalter wie `*_manage_firewall`, `*_manage_service`, `*_service_enabled` oder gleichwertige Steuerung.
-- Rollen mit generierten Dateien muessen veraltete Artefakte nach Moeglichkeit entfernen.
-- Rollen duerfen `ansible_*` Facts voraussetzen, aber Beispiel-Playbooks und Syntax-Tests muessen `gather_facts: true` setzen.
-- Fakten werden auf Play-Ebene gesammelt, nicht ueber pauschales `setup` in jeder Rolle.
-- Wenn eine Rolle nicht sinnvoll plattformuebergreifend ist, wird sie klar eingegrenzt statt halb-portabel gehalten.
-- Defaults muessen so definiert sein, dass eine Rolle mit ihren Standardwerten lauffaehig ist. Ausnahme: wenn die Fachlichkeit zwingend Pflichtdaten verlangt, muessen diese Variablen in `argument_specs` und README klar als erforderlich beschrieben werden.
-- Relevante Anwendungen und Dienste sollen ihre SELinux-Kontexte, Booleans, Ports und Policy-Anforderungen beim Rollout selbst setzen, wenn die Rolle auf RedHat-Familie unterstuetzt wird und SELinux fuer den Dienst fachlich relevant ist.
-- Dienstrollen sollen Firewall-Freischaltungen fuer Debian-Familie und RedHat-Familie grundsaetzlich selbst unterstuetzen, also `ufw` und `firewalld`, sofern die Rolle Netzwerkports nach aussen oeffnet und dies fachlich sinnvoll ist.
+`dante` ist distributionsgebunden auf Ubuntu und EL9: Debian 13 bietet kein Dante-Paket in Stable. Alle anderen Rollen haben ein portables Ziel. Neue Distributionen oder Releases werden erst nach Anpassung von Matrix, Assertions, Plattformdateien und Tests freigegeben.
 
 ## Verbindliches Rollen-Schema
 
-Jede Rolle soll nach demselben technischen Muster aufgebaut werden. Abweichungen muessen begruendbar sein.
+Jede Rolle enthaelt:
 
-### 1. Rollen-API
+- `defaults/main.yml`: oeffentliche Eingaben ohne Secrets.
+- `tasks/main.yml`: generierter Einstieg mit Preflight und Import von `configuration.yml`.
+- `tasks/preflight.yml`: generierte Fact- und Plattformpruefung.
+- `tasks/configuration.yml`: fachliche Implementierung; weitere Taskdateien nach Verantwortungsbereich.
+- `vars/platform/<Familie>.yml`, `<Distribution>.yml`, `<Distribution>-<Version>.yml`.
+- `vars/main.yml` fuer gemeinsame interne Konstanten, falls erforderlich.
+- `handlers/main.yml`, wenn Aenderungen einen Handler benoetigen.
+- `meta/main.yml`, `meta/argument_specs.yml`, `README.md`, `tests/test.yml`.
 
-- Alle oeffentlichen Variablen stehen in `defaults/main.yml`.
-- Alle oeffentlichen Variablen werden in `meta/argument_specs.yml` beschrieben und typisiert.
-- Pflichtvariablen sind nur erlaubt, wenn die Rolle ohne sie fachlich keinen sinnvollen Default haben kann.
-- Interne Hilfsvariablen und OS-spezifische Ableitungen gehoeren nicht in die oeffentliche API, sondern in `vars/`.
+Der Einstieg sammelt fehlende benoetigte Facts und verwirft nicht unterstuetzte Releases vor Aenderungen. Vorhandene Facts werden wiederverwendet. Optionale IPv4-/IPv6-Routen duerfen auf einem Host fehlen. Beispiele und Tests sammeln Facts auf Play-Ebene. Neue Implementierungen verwenden `ansible_facts` statt injizierter globaler Fact-Aliase.
 
-### 2. Lauffaehige Defaults
+Die Plattformschicht laedt Familie, Distribution und Release in dieser Reihenfolge. Leere Dateien bedeuten geerbte Werte. OS-abhaengige Paketnamen, Dienstnamen, Pfade, Validatoren und SELinux-Werte gehoeren in diese Schicht; keine Distributionsannahmen in Templates verstecken.
 
-- Standardwerte muessen einen sicheren, idempotenten und lauffaehigen Rollout ermoeglichen.
-- Eine Rolle darf im Default keine externen Geheimnisse voraussetzen.
-- Wenn ein Dienst ohne echte Konfiguration nicht sinnvoll gestartet werden darf, muss der Default diesen Dienst entweder deaktiviert lassen oder durch Assertions einen klaren Operator-Fehler erzeugen.
-- "Leer aber gueltig" ist besser als "stillschweigend kaputt".
+Oeffentliche Defaults muessen auch bei der automatischen Argumentvalidierung vor dem Preflight auswertbar sein. OS-abgeleitete optionale Defaults brauchen deshalb einen typgerechten Fallback. Der Fallback darf die spaetere effektive Plattformauswahl nicht festschreiben.
 
-### 3. Plattformschicht
+## Rollen-API und Defaults
 
-- Paketnamen, Pfade, Service-Namen, Validatoren, SELinux-spezifische Werte und Firewall-Details liegen in `vars/`.
-- Tasks, Templates und Handler referenzieren diese abstrahierten Variablen statt Distributionen direkt, wo immer das praktikabel ist.
-- Plattformvalidierung passiert frueh in `tasks/main.yml`.
+- `meta/argument_specs.yml` ist der verbindliche, typisierte Variablenvertrag.
+- Jede oeffentliche Defaultvariable wird dokumentiert und typisiert. Strukturelle Listen brauchen bei neuen APIs Unterfelder, Typen und Choices.
+- Defaults erlauben einen sicheren Rollout oder erzeugen einen klaren Fehler fuer fachlich notwendige Pflichtdaten. Keine Platzhalter-Passwoerter, produktiven Zieladressen oder nicht dokumentierten Fremdvariablen.
+- Pflichtdaten wie SMTP-Relay, Verzeichnis-Domain, Cluster-Token oder Migrationsquelle werden vor dem Eingriff validiert.
+- Repository-Initialisierung, Backup-Zeitplaene, statische Resolver-Uebernahme und optionale Fremdbinaries brauchen ausdrueckliche Schalter.
+- Paket- und Konfigurationsdefaults muessen durch Inventory-Eingaben sinnvoll uebersteuerbar bleiben.
 
-### 4. Dienststeuerung
+## Netzwerk und Firewall
 
-- Dienstrollen haben wenn sinnvoll `*_manage_service`, `*_service_enabled` und `*_service_state`.
-- Konfiguration wird vor Reload oder Restart validiert, wenn ein geeignetes Binary oder Tool vorhanden ist.
-- Handler sollen nur das tun, was nach erfolgreicher Konfigurationsaenderung fachlich notwendig ist.
+`network` ist der einzige oeffentliche Einstieg fuer Host-Netzwerk:
 
-### 5. Firewall
+- Ubuntu: Netplan mit networkd.
+- Debian: ifupdown; deklarierte DNS-Daten ueber den nativen Resolver.
+- Rocky/RHEL: NetworkManager mit nmcli.
 
-- Dienstrollen mit exponierten Ports bieten standardisierte Firewall-Steuerung.
-- Debian-Familie: `ufw`
-- RedHat-Familie: `firewalld`
-- Die Steuerung ist standardmaessig abschaltbar, typischerweise ueber `*_manage_firewall: false`.
-- Wenn eine Rolle keine Portfreischaltung vornimmt, muss das eine bewusste Entscheidung sein und im README erkennbar bleiben.
+`firewall` ist der einzige oeffentliche Einstieg fuer Portregeln:
 
-### 6. SELinux
+- Debian/Ubuntu: UFW.
+- Rocky/RHEL: firewalld.
 
-- Rollen fuer RedHat-Familie pruefen, ob der Dienst SELinux-relevante Anforderungen hat.
-- Wenn Ports, Dateikontexte, Booleans oder Label fuer den Dienst erforderlich sind, setzt die Rolle diese selbst.
-- SELinux darf nicht als manuelle Nacharbeit beim Operator liegen bleiben, wenn die Rolle den Dienst offiziell fuer RHEL 9 unterstuetzt.
-- Wenn SELinux bewusst nicht durch die Rolle verwaltet wird, muss das in README und AGENT-konformer Architekturentscheidung dokumentiert sein.
+Die frueheren oeffentlichen Rollen `ufw`, `firewalld`, `netplan`, `interfaces`, `ifcfg` und `nmcli` entfallen in Version 2. Dienstrollen delegieren Portregeln ueber `include_role` an `degitag.infrastructure.firewall`; sie rufen die Backendmodule nicht selbst auf.
 
-### 7. Idempotenz und Bereinigung
+Fuer jede deklarierte Schnittstelle gilt genau eine Verantwortlichkeit. Bestehende Manager oder fremde Profile nicht stillschweigend loeschen. NetworkManager verwendet vorhandene aktive Profile, statt konkurrierende Definitionen anzulegen. Backend-Migrationen werden ausdruecklich freigegeben. Aktivierung wird getrennt vom Rendern bzw. nativen Check-Modus gesteuert. Ein unterbrochener Lauf muss auch bei bereits geschriebener Konfiguration wieder konvergieren.
 
-- Generierte Dateien muessen deterministisch sein.
-- Veraltete Artefakte werden entfernt, wenn die Rolle die Quelle der Wahrheit fuer dieses Verzeichnis oder diese Dateifamilie ist.
-- Tasks duerfen bei wiederholter Ausfuehrung keine Drift erzeugen.
+Firewall-Regeln sind additiv. Eine Dienstrolle setzt keine globale Policy zurueck. Vollstaendig vertraute Netze und Forwarding sind eine eigene ausdrueckliche Entscheidung. Entfernen von Regeln muss nachvollziehbar und auf eigene Regeln begrenzt bleiben.
 
-### 8. Tests und Doku
+## Dienststeuerung, Security und SELinux
 
-- `tests/test.yml` muss die Rolle mit `gather_facts: true` einbinden.
-- README, `meta/main.yml`, Defaults und `argument_specs` muessen dieselbe API und dieselben Plattformaussagen transportieren.
-- Beispiel-Playbooks sollen das vorgesehene Betreiberverhalten zeigen, nicht nur irgendein Minimalbeispiel.
+- Dienstrollen bieten soweit sinnvoll `*_manage_service`, `*_service_enabled`, `*_service_state`.
+- Diese Schalter gelten auch fuer Restart-/Reload-Handler. Ein Konfigurationswechsel darf einen bewusst gestoppten Dienst nicht starten.
+- Native Konfiguration vor Aktivierung validieren, wenn ein geeigneter Validator vorhanden ist.
+- SSH, SFTP und SSSD besonders sorgfaeltig pruefen; erfolgreiche Syntax ist noch kein erfolgreicher Zugriff.
+- SFTP-Schluessel pro Benutzer in getrennten, rootverwalteten Dateien halten. Ein Homepfad innerhalb eines Chroots ist kein gemeinsamer Hostpfad fuer `authorized_keys`.
+- Unterstuetzte EL9-Dienste verwalten notwendige SELinux-Pakete, Ports, Kontexte und Booleans selbst. Enforcement nicht abschalten.
+- Den von der Distribution unterstuetzten Dienststeuerungsweg verwenden, insbesondere fuer auditd unter EL9.
+- Sensible Konfiguration mit restriktiven Dateirechten und `no_log` schreiben.
+- Externe Repositories und Downloads dokumentieren. Signaturen/Fingerprints pruefen, Binaries und Bootstrap-Installer moeglichst nach Version und Checksumme festlegen.
 
-## Plattform-Modell
+## Idempotenz und Bereinigung
 
-Wir pflegen drei Support-Stufen:
+Generierte Dateien sind deterministisch. Laufzeit-Timestamps gehoeren nicht in Templates, wenn sie jeden Lauf aendern. Abgeleitete Listen vor erneutem Aufbau initialisieren.
 
-- `portable`: Rolle soll auf Debian-Familie und RedHat-Familie konsistent funktionieren.
-- `family-scoped`: Rolle gilt absichtlich nur fuer genau eine OS-Familie.
-- `distro-scoped`: Rolle gilt absichtlich nur fuer einzelne Distributionen innerhalb einer Familie.
+Veraltete eigene Artefakte dort entfernen, wo die Rolle die Quelle der Wahrheit ist. Fremde Dateien, Repositories, Netzwerkprofile und andere Betreiberkonfiguration nicht ungefragt entfernen. Storage-Rollen duerfen keine destruktive Rekonfiguration aus leeren Defaults ableiten.
 
-Regeln dazu:
+## Generator und lokale Toolchain
 
-- `portable` Rollen brauchen fruehe Plattformvalidierung und OS-spezifische `vars/`.
-- `family-scoped` Rollen muessen Meta, README, Assertions und Tasks auf dieselbe Familie ausrichten.
-- `distro-scoped` Rollen muessen die Begrenzung begruenden, nicht nur zufaellig so implementiert sein.
-- Was `meta/main.yml`, `README.md`, `assert` und `vars/` sagen, muss dieselbe Wahrheit beschreiben.
+Geruest und generierte Inhalte werden ueber `tools/generate_role_scaffold.py` und `tools/role_scaffold_config.yml` gepflegt. Beschreibungen, Betreiberhinweise, Beispiele und explizite Argumentvertraege gehoeren in die Konfiguration. Fachliche Tasks stehen in `tasks/configuration.yml`, nicht im generierten Einstieg.
 
-## Umgang mit Plattformunterschieden
+Auf macOS eine eigene `.venv` mit Homebrew Python 3.12 verwenden. Homebrew ohne sudo betreiben:
 
-- `netplan`, `interfaces`, `ufw`, `systemd_resolved`, `systemd_timesyncd`, `apt_repos`, `unattended_updates` sind Debian-seitig zu behandeln.
-- `ifcfg`, `firewalld`, `dnf_repos`, `dnf_automatic` sind RedHat-seitig zu behandeln.
-- Rollen mit `portable` Anspruch duerfen Debian-Pfade nicht in Templates, Handlern oder Validierungsbefehlen hart codieren.
-- Rollen mit `portable` Anspruch duerfen RedHat-spezifische Paket- oder Service-Namen nicht in Defaults verstecken.
-- OS-spezifische Includes folgen bevorzugt einem einheitlichen `include_vars`-Muster mit `with_first_found`, wenn mehr als eine Plattformvariante gepflegt wird.
+```bash
+/opt/homebrew/opt/python@3.12/bin/python3.12 -m venv .venv
+.venv/bin/python -m pip install -r requirements-test.txt
+.venv/bin/ansible-galaxy collection install -r requirements.yml
+```
 
-## Rolle-Klassen
+Nach Struktur-Aenderungen:
 
-Der aktuelle Rollenbestand wird architektonisch in diese Klassen eingeordnet.
+```bash
+.venv/bin/python tools/generate_role_scaffold.py
+.venv/bin/python tools/format_yaml.py
+```
 
-### Basis und Baseline
+## Verpflichtende Pruefungen
 
-- `hosts`: Hostnamen- und `/etc/hosts`-Grundlagen
-- `motd`: Login- und Betriebsinformationen
-- `packages`: Basispaketmanagement ueber Familien hinweg
-- `proxy`: systemweite Proxy-Umgebungswerte
-- `users`: lokale Benutzer, Gruppen und Sudo
-- `mounts`: generische Mount-Definitionen
-- `lvm`: Volume-Management
-- `logrotate`: generische Rotation eigener Logdateien
-- `sysctl`: Kernel-Tuning
-- `ca`: Trust-Store und Zertifikats-Baseline
+- Generator mit `--check`.
+- `pytest tests/unit`.
+- YAML-Lint und Ansible-Lint mit Profil `production`.
+- Syntaxpruefung jeder Rolle mit `gather_facts: true`.
+- Collection bauen, installieren und Artefakt auf Identitaet sowie ausgeschlossene Caches/Secrets pruefen.
+- `ansible-test sanity` fuer Compile und Import ausserhalb eines von Git ignorierten Installationsverzeichnisses ausfuehren.
+- Container-Smoke-Tests auf allen fuenf frei verfuegbaren Zielimages, einschliesslich zweitem Lauf mit `changed=0`.
+- Vorhandene Functional-Tests bei betroffenen Rollen oder gemeinsamen Aenderungen ausfuehren.
 
-### Repositories und Updates
+Netzwerk, Firewall, Dienststarts, SELinux und Neustarts brauchen zusaetzlich echte dedizierte VMs. Container ersetzen diese Pruefungen nicht. Testumfang und verbleibende Luecken in `docs/validation/` festhalten; keine pauschale Abnahme aller Features aus einem gruenen Syntaxlauf ableiten.
 
-- `apt_repos`: Debian/Ubuntu Paketquellen
-- `dnf_repos`: RHEL Paketquellen
-- `dnf_automatic`: automatische DNF-Updates
-- `unattended_updates`: automatische APT-Updates
+CI-Actions nach Commit-SHA referenzieren, minimale Berechtigungen setzen und Abhaengigkeiten mit Dependabot pflegen. Releases erst nach passenden Versions-Tags und bestandenen Checks; keine implizite Galaxy-Veroeffentlichung.
 
-### Netzwerk und Namensaufloesung
+## Dokumentation und Zugangsdaten
 
-- `netplan`: modernes Debian/Ubuntu Netzwerk-Rendering
-- `interfaces`: klassisches Debian-Netzwerk ueber ifupdown
-- `ifcfg`: klassisches RedHat-Netzwerk
-- `nmcli`: NetworkManager-Steuerung
-- `resolvconf`: Resolver-Dateipflege
-- `systemd_resolved`: Resolver-Dienst auf Debian-Familie
-- `systemd_timesyncd`: einfache Zeitsynchronisation auf Debian-Familie
-- `chrony`: portable NTP/Zeitsynchronisation
-- `wpad`: PAC/WPAD-Bereitstellung
-- `unbound`: DNS-Resolver
-
-### Security und Zugang
+Collection-Referenzen immer als `degitag.infrastructure.*` schreiben. K3s-Referenzen verwenden `degitag.k3s.*`. Beispiele enthalten Dokumentationsadressen und Secret-Store-Referenzen.
 
-- `sshd`: OpenSSH-Daemon
-- `sftp_server`: eingeschraenkte SFTP-Bereitstellung
-- `sssd`: zentrale Identitaetsanbindung
-- `fail2ban`: brute-force Schutz
-- `ufw`: Debian-Firewall
-- `firewalld`: RedHat-Firewall
-- `auditd`: Audit-Subsystem
-
-### Proxy, Edge und Dienste
-
-- `apache`: Webserver
-- `nginx`: Webserver und Reverse Proxy
-- `haproxy`: L4/L7 Load Balancer
-- `traefik`: Edge Proxy
-- `squid`: HTTP-Proxy
-- `dante`: SOCKS-Proxy
-- `keepalived`: VIP/Failover
-- `certbot`: ACME/Let's Encrypt
-
-### Observability und Agents
-
-- `alloy`: Telemetrie-Agent
-- `node_exporter`: Prometheus Node Exporter
-- `telegraf`: Metrik-Agent
-- `qemu_guest_agent`: VM-Integration fuer QEMU
-- `vmware_tools`: VM-Integration fuer VMware
-
-### Storage, Backup und Infrastrukturintegration
-
-- `nfs`: NFS Client und Server-Anteile je nach Rolleingang
-- `multipath`: Multipath-Storage
-- `borgbackup`: Backup-Agent
-- `borgmatic`: Backup-Orchestrierung fuer Borg
-- `docker`: Container-Runtime und Host-Daemon
-- `msmtp`: SMTP-Relay fuer Systemmail
-
-## Umgang mit jeder Rollen-Klasse
-
-### Basis- und Baseline-Rollen
-
-- Diese Rollen sollen moeglichst frueh in einem Host-Lifecycle laufen.
-- Sie duerfen keine schwergewichtigen Netzwerkdienste implizit aktivieren.
-- Sie sind konservativ zu aendern, weil sie viele andere Rollen indirekt beeinflussen.
-
-### Repo- und Update-Rollen
-
-- Diese Rollen sind die Quelle fuer Paketverfuegbarkeit und muessen vor dienstnahen Rollen sauber etabliert sein.
-- Sie duerfen keine Fremdrepositories stillschweigend aktivieren, ohne dass Quelle und Zweck klar in Defaults und README benannt sind.
-- Entfernen oder Ueberschreiben vorhandener Repo-Dateien braucht immer einen klaren Schalter und idempotente Bereinigung.
-
-### Netzwerk-Rollen
-
-- Genau eine primaere Netzwerkrolle soll ein Interface verwalten.
-- `netplan`, `interfaces`, `ifcfg` und `nmcli` duerfen nicht unkoordiniert denselben Hostpfad oder dieselbe Schnittstelle steuern.
-- Resolver-Rollen muessen offenlegen, ob sie `resolv.conf`, `systemd-resolved`, lokale Stub-Resolver oder Nameserver-Reihenfolge beeinflussen.
-
-### Security-Rollen
-
-- Diese Rollen brauchen sichere Defaults und duerfen keinen Zugang unabsichtlich oeffnen.
-- Firewall-Rollen und Dienst-Rollen muessen Verantwortungsgrenzen klar halten: entweder steuert die Dienstrolle Ports optional selbst, oder die dedizierte Firewall-Rolle ist die Quelle der Wahrheit.
-- SSH-, SFTP- und SSSD-Aenderungen brauchen besonders saubere Konfigurationsvalidierung, da sie Remote-Zugriff direkt betreffen.
-- SELinux-relevante Security-Rollen auf RedHat-Familie duerfen notwendige SELinux-Anpassungen nicht auf manuelle Runbooks auslagern.
-
-### Proxy-, Edge- und Service-Rollen
-
-- Diese Rollen brauchen explizite Service- und Firewall-Schalter.
-- Konfigurationsrendering ohne Validierung ist nur akzeptabel, wenn das Zielsystem keinen Validator anbietet.
-- Listener, Zertifikate, ACLs und Include-Verzeichnisse sind API der Rolle und muessen als solche dokumentiert werden.
-- Rollen dieser Klasse sollen `ufw` und `firewalld` beide bedienen koennen, wenn sie fuer beide Familien unterstuetzt werden.
-- Rollen dieser Klasse sollen SELinux-relevante Ports und Kontexte auf RedHat-Familie selbst behandeln, sofern der Dienst offiziell unterstuetzt wird.
-
-### Agent- und Observability-Rollen
-
-- Diese Rollen muessen nicht nur installieren, sondern Deinstallation, Service-Aktivierung und Konfigurationsaenderungen kontrollierbar machen.
-- Externe Paketquellen, GPG-Keys und Binaries sind als Supply-Chain-Risiko zu behandeln und gehoeren in klar benannte Variablen.
-
-### Storage- und Integrationsrollen
-
-- Diese Rollen greifen tief ins System ein und muessen Assertions, Guard Rails und saubere Defaults haben.
-- Storage-Rollen duerfen nie stillschweigend destructive Re-Konfigurationen ausloesen.
-
-## Erwartung pro Rolle
-
-Fuer jede Rolle gilt bei Review und Aenderungen dieselbe Checkliste:
-
-- Ist der Scope der Rolle klar und eng genug?
-- Stimmen `meta/main.yml`, `README.md`, Defaults, `argument_specs` und Tasks inhaltlich ueberein?
-- Ist Plattformverhalten explizit und frueh validiert?
-- Liegen Paketnamen, Pfade, Service-Namen und Validatoren in `vars/` statt in Templates oder Tasks?
-- Sichert `meta/argument_specs.yml` die komplette oeffentliche Rollen-API sinnvoll ab?
-- Sind Defaults mit Standardwerten lauffaehig oder ist eine notwendige Pflichtvariable sauber als solche modelliert?
-- Gibt es fuer Dienste eine sichere und steuerbare Service- und Firewall-Logik?
-- Gibt es fuer exponierte Dienste sowohl Debian- als auch RedHat-Firewall-Unterstuetzung, wenn die Rolle beide Familien unterstuetzt?
-- Sind notwendige SELinux-Anpassungen Bestandteil der Rolle statt manueller Nacharbeit?
-- Werden Konfigurationsdateien vor Neustart validiert?
-- Bleiben Dateien und Handler idempotent?
-- Entfernt die Rolle veraltete Artefakte dort, wo sie die Quelle der Wahrheit ist?
-- Ist die Rolle fuer lokale Syntax-Checks und Beispiel-Playbooks mit `gather_facts: true` geeignet?
-
-## Definition des Umgangs mit dem aktuellen Rollenbestand
-
-So wollen wir den vorhandenen Bestand kuenftig behandeln:
-
-- `portable` und strategisch wichtig: `alloy`, `apache`, `auditd`, `borgbackup`, `borgmatic`, `ca`, `certbot`, `chrony`, `dante`, `docker`, `fail2ban`, `haproxy`, `hosts`, `keepalived`, `logrotate`, `lvm`, `mounts`, `msmtp`, `multipath`, `nfs`, `nginx`, `nmcli`, `node_exporter`, `packages`, `proxy`, `qemu_guest_agent`, `resolvconf`, `sftp_server`, `squid`, `sshd`, `sssd`, `sysctl`, `telegraf`, `traefik`, `unbound`, `users`, `vmware_tools`, `wpad`.
-- `family-scoped` Debian: `apt_repos`, `interfaces`, `netplan`, `systemd_resolved`, `systemd_timesyncd`, `ufw`, `unattended_updates`.
-- `family-scoped` RedHat: `dnf_automatic`, `dnf_repos`, `firewalld`, `ifcfg`.
-- Rollen mit moeglichem Architekturabgleich bei Gelegenheit: `proxy`, `resolvconf`, `systemd_resolved`, `unbound`, `wpad`, weil sie alle in denselben DNS- oder Proxy-Fluss eingreifen koennen.
-- Rollen mit hohem Kompositionsrisiko: `netplan`, `interfaces`, `ifcfg`, `nmcli`, `ufw`, `firewalld`, `docker`, `keepalived`, `haproxy`, `nginx`, `apache`, `traefik`, `unbound`, `squid`, `dante`.
-
-## Aenderungsregeln fuer bestehende Rollen
-
-- Keine Rolle wird in einem einzelnen Change gleichzeitig funktional erweitert, umbenannt und architektonisch refaktoriert.
-- Plattformbereinigung geht vor Feature-Ausbau.
-- Wenn eine Rolle bereits Service- und Firewall-Logik besitzt, wird diese erst vereinheitlicht, bevor weitere Sonderfaelle dazukommen.
-- Wenn eine portable Dienstrolle nur `ufw` oder nur `firewalld` implementiert, ist das technische Schuld und nicht der Zielzustand.
-- Wenn eine portable RedHat-faehige Dienstrolle SELinux-relevante Schritte braucht, gehoeren diese in die Rolle.
-- Wenn eine Rolle versteckte Kopplungen zu einer anderen Rolle hat, wird diese Kopplung dokumentiert oder entfernt.
-- Wenn ein Verhalten nur fuer Debian oder nur fuer RedHat gilt, gehoert diese Wahrheit in Meta, README und Assertions.
-
-## Neue Rollen
-
-Neue Rollen werden nur aufgenommen, wenn:
-
-- der Scope nicht bereits durch eine bestehende Rolle besser abgedeckt ist
-- die Rolle in eine der bestehenden Klassen passt oder eine neue Klasse begruendet
-- Plattform-Support vorab entschieden ist
-- ein konsistentes Rollen-Geruest ueber `tools/generate_role_scaffold.py` erzeugt wurde
-
-## Scaffold und Formatierung
-
-- Rollen-Geruest wird ueber `tools/generate_role_scaffold.py` gepflegt.
-- YAML wird ueber `tools/format_yaml.py` vereinheitlicht.
-- Nach Struktur-Aenderungen immer ausfuehren:
-  - `.venv/bin/python tools/generate_role_scaffold.py`
-  - `.venv/bin/python tools/format_yaml.py`
-
-## Lokale Toolchain
-
-- Auf macOS die lokale `.venv` mit Homebrew `python@3.12` bauen.
-- Homebrew nicht mit `sudo` ausfuehren.
-- Beispiel:
-  - `/opt/homebrew/opt/python@3.12/bin/python3.12 -m venv .venv`
-  - `.venv/bin/pip install -r requirements-test.txt`
-
-## Mindestchecks vor Commit
-
-- `.venv/bin/python tools/generate_role_scaffold.py --check`
-- `PATH="$PWD/.venv/bin:$PATH" bash tests/run_role_syntax_checks.sh`
-- Umfangreiche Test-Suiten wie `tests/unit`, `ansible-lint`, `ansible-test sanity`, Container-Smoke-Tests und rollenweite Functional-Tests sind waehrend der aktuellen Transitionsphase bewusst nicht verpflichtend.
-
-## Doku- und Namespace-Regeln
-
-- Collection-Referenzen immer als `onkeldom.default_server.*`
-- keine neuen Verweise auf den alten Namespace oder alte Repository-Namen
-- Beispiel-Playbooks und Rollen-READMEs nach jeder Namespace-Aenderung regenerieren
-- README und Meta duerfen keine Plattformen oder Verhaltensweisen behaupten, die Tasks real nicht abbilden
-
-## Zusammenarbeit bei AGENTS.md
-
-Dieses Dokument ist absichtlich normativ und darf weitergeschaerft werden. Aenderungen an `AGENTS.md` sollen kuenftig vor allem diese Fragen beantworten:
-
-- Welche Rollen sind strategisch und muessen plattformsauber gehalten werden?
-- Welche Rollen sind bewusst familiespezifisch und sollen es bleiben?
-- Welche Rollen ueberschneiden sich funktional und brauchen klare Verantwortungsgrenzen?
-- Welche Service-, Netzwerk- und Security-Rollen brauchen strengere Review-Kriterien als der Rest?
+README, Migrationsvertrag und technische Validierungsnachweise werden im Repository versioniert. Betriebsdokumentationen werden in Outline gepflegt, wenn dies Teil des Auftrags ist. API-Zugangsdaten liegen gegebenenfalls in `~/.zshenv`; nur die benoetigten Variablen verwenden und niemals ihren Inhalt ausgeben oder ins Repository kopieren.

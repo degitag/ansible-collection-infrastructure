@@ -1,0 +1,46 @@
+---
+- name: Ensure NetworkManager is available for profile management
+  ansible.builtin.service:
+    name: '{{ _network_services.nmcli }}'
+    state: started
+    enabled: true
+  when: network_manage_service | bool
+  become: true
+
+- name: Inspect active NetworkManager profiles before adopting interfaces
+  ansible.builtin.command:
+    argv:
+    - nmcli
+    - --terse
+    - --escape
+    - "no"
+    - --fields
+    - DEVICE,NAME
+    - connection
+    - show
+    - --active
+  register: _network_nmcli_active
+  changed_when: false
+  check_mode: false
+- name: Reuse active profiles instead of creating competing definitions
+  ansible.builtin.set_fact:
+    _network_nmcli_compiled: '{{ _network_compiled | degitag.infrastructure.network_nmcli_profiles(_network_nmcli_active.stdout) }}'
+- name: Render NetworkManager connection profiles
+  community.general.nmcli: "{{ item | combine({'state': 'present', 'autoconnect': network_apply | bool}) }}"
+  loop: '{{ _network_nmcli_compiled }}'
+  loop_control:
+    label: '{{ item.conn_name }}'
+  register: _network_nmcli_profiles
+  become: true
+
+  check_mode: '{{ not (network_apply | bool) or ansible_check_mode }}'
+- name: Activate changed NetworkManager profiles
+  community.general.nmcli:
+    conn_name: '{{ item.item.conn_name }}'
+    state: up
+    conn_reload: '{{ item.changed }}'
+  loop: '{{ _network_nmcli_profiles.results }}'
+  loop_control:
+    label: '{{ item.item.conn_name }}'
+  when: network_apply | bool
+  become: true

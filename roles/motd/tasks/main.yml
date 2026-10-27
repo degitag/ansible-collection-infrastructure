@@ -1,47 +1,7 @@
 ---
-- name: Empty /etc/motd
-  ansible.builtin.copy:
-    content: ""
-    dest: "/etc/motd"
-    owner: root
-    group: root
-    mode: "0644"
-  become: true
-  tags: motd
-
-- name: Configure /etc/update-motd.d/00-header
-  ansible.builtin.template:
-    src: "debian.j2"
-    dest: "/etc/update-motd.d/00-header"
-    owner: root
-    group: root
-    mode: "0755"
-  when: ansible_os_family == "Debian"
-  become: true
-  tags: motd
-
-- name: Remove help-text
-  ansible.builtin.file:
-    path: "{{ item }}"
-    state: absent
-  with_items:
-  - /etc/update-motd.d/10-help-text
-  - /etc/update-motd.d/50-landscape-sysinfo
-  - /etc/update-motd.d/50-motd-news
-  - /etc/update-motd.d/60-unminimize
-  - /etc/update-motd.d/88-esm-announce
-  - /etc/update-motd.d/91-contract-ua-esm-status
-  when: ansible_os_family == "Debian"
-  become: true
-  tags: motd
-
-- name: Configure /etc/profile.d/motd.sh
-  ansible.builtin.template:
-    src: "redhat.j2"
-    dest: "/etc/profile.d/motd.sh"
-    owner: root
-    group: root
-    mode: "0755"
-  when: ansible_os_family == "RedHat"
-  become: true
+- name: Prepare facts and platform variables
+  ansible.builtin.import_tasks: preflight.yml
+  tags: always
+- name: Apply motd configuration
+  ansible.builtin.import_tasks: configuration.yml
   tags: motd

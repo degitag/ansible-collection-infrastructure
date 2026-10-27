@@ -1,0 +1,153 @@
+---
+- name: Validate supported platform
+  ansible.builtin.assert:
+    that:
+    - ansible_facts.os_family in ["Debian", "RedHat"]
+    fail_msg: The logrotate role supports Debian and RedHat families only.
+  tags: logrotate
+
+- name: Validate role settings
+  ansible.builtin.assert:
+    that:
+    - logrotate_package_state in ["present", "absent"]
+    - logrotate_config_dir.startswith("/")
+    - (not (logrotate_prune_managed_files | bool)) or (logrotate_file_prefix | length > 0)
+    fail_msg: Invalid logrotate role configuration detected.
+  tags: logrotate
+
+- name: Initialize managed logrotate rule state
+  ansible.builtin.set_fact:
+    logrotate_rules_effective: []
+    logrotate_expected_rule_files: []
+- name: Build effective logrotate rules
+  ansible.builtin.set_fact:
+    logrotate_rules_effective: >-
+      {{
+        (logrotate_rules_effective | default([]))
+        + [logrotate_rule_defaults | combine(item, recursive=True)]
+      }}
+  loop: '{{ logrotate_rules }}'
+  tags: logrotate
+
+- name: Validate logrotate rules
+  ansible.builtin.assert:
+    that:
+    - item.name is defined
+    - item.name | length > 0
+    - item.state in ["present", "absent"]
+    - item.path is not defined or item.path.startswith("/")
+    - item.state == "absent" or (item.paths | default([]) | length > 0)
+    - item.frequency in ["hourly", "daily", "weekly", "monthly", "yearly"] or not item.frequency
+    - not (item.mailfirst | bool and item.maillast | bool)
+    - (not item.su_user and not item.su_group) or (item.su_user and item.su_group)
+    fail_msg: Invalid logrotate rule definition for {{ item.name | default('unnamed') }}.
+  loop: '{{ logrotate_rules_effective | default([]) }}'
+  loop_control:
+    label: "{{ item.name | default('unnamed') }}"
+  tags: logrotate
+
+- name: Build expected managed rule file list
+  ansible.builtin.set_fact:
+    logrotate_expected_rule_files: >-
+      {{
+        (logrotate_expected_rule_files | default([]))
+        + [item.path | default(logrotate_config_dir ~ '/' ~ logrotate_file_prefix ~ item.name)]
+      }}
+  loop: '{{ logrotate_rules_effective | default([]) }}'
+  when: item.state == "present"
+  loop_control:
+    label: '{{ item.name }}'
+  tags: logrotate
+
+- name: Ensure logrotate package is in the requested state
+  ansible.builtin.package:
+    name: '{{ logrotate_package_name }}'
+    state: '{{ logrotate_package_state }}'
+  become: true
+  when: logrotate_manage_package | bool
+  tags: logrotate
+
+- name: Ensure logrotate configuration directory exists
+  ansible.builtin.file:
+    path: '{{ logrotate_config_dir }}'
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+  when:
+  - logrotate_package_state != "absent"
+  - (logrotate_rules_effective | default([]) | length) > 0 or logrotate_prune_managed_files | bool
+  tags: logrotate
+
+- name: Check logrotate validator availability
+  ansible.builtin.stat:
+    path: '{{ logrotate_binary }}'
+  register: logrotate_binary_stat
+  when:
+  - logrotate_package_state != "absent"
+  - (logrotate_rules_effective | default([]) | selectattr('state', 'equalto', 'present') | list | length) > 0
+  tags: logrotate
+
+- name: Validate logrotate validator availability
+  ansible.builtin.assert:
+    that:
+    - logrotate_binary_stat.stat.exists
+    fail_msg: >-
+      The logrotate validator binary {{ logrotate_binary }} is not available. Install logrotate on the target host or keep logrotate_manage_package enabled.
+  when:
+  - logrotate_package_state != "absent"
+  - (logrotate_rules_effective | default([]) | selectattr('state', 'equalto', 'present') | list | length) > 0
+  tags: logrotate
+
+- name: Deploy managed logrotate rules
+  ansible.builtin.template:
+    src: rule.conf.j2
+    dest: "{{ item.path | default(logrotate_config_dir ~ '/' ~ logrotate_file_prefix ~ item.name) }}"
+    owner: root
+    group: root
+    mode: '0644'
+    validate: '{{ logrotate_validate_command }}'
+  loop: '{{ logrotate_rules_effective | default([]) }}'
+  when:
+  - logrotate_package_state != "absent"
+  - item.state == "present"
+  loop_control:
+    label: '{{ item.name }}'
+  become: true
+  tags: logrotate
+
+- name: Remove explicitly absent logrotate rules
+  ansible.builtin.file:
+    path: "{{ item.path | default(logrotate_config_dir ~ '/' ~ logrotate_file_prefix ~ item.name) }}"
+    state: absent
+  loop: '{{ logrotate_rules_effective | default([]) }}'
+  when: item.state == "absent"
+  loop_control:
+    label: '{{ item.name }}'
+  become: true
+  tags: logrotate
+
+- name: Discover managed-prefix logrotate files
+  ansible.builtin.find:
+    paths: '{{ logrotate_config_dir }}'
+    patterns: '{{ logrotate_file_prefix }}*'
+    file_type: file
+  register: logrotate_managed_rule_files
+  when:
+  - logrotate_prune_managed_files | bool
+  - logrotate_package_state != "absent"
+  tags: logrotate
+
+- name: Remove stale managed-prefix logrotate files
+  ansible.builtin.file:
+    path: '{{ item.path }}'
+    state: absent
+  loop: '{{ logrotate_managed_rule_files.files | default([]) }}'
+  when:
+  - logrotate_prune_managed_files | bool
+  - item.path not in (logrotate_expected_rule_files | default([]))
+  loop_control:
+    label: '{{ item.path }}'
+  become: true
+  tags: logrotate

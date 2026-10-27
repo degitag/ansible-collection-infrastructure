@@ -1,0 +1,504 @@
+{
+  "verified_on": "2026-10-18",
+  "collection": "degit.default_server",
+  "version": "2.0.0",
+  "roles": 47,
+  "unit_tests_passed": 42,
+  "static_checks": [
+    "scaffold",
+    "unit",
+    "yamllint",
+    "lint",
+    "syntax",
+    "syntax220",
+    "artifact",
+    "sanity"
+  ],
+  "ansible_core": [
+    "2.20.10",
+    "2.21.5"
+  ],
+  "vm_tests": {
+    "platform_idempotence": {
+      "debian13": {
+        "ok": 214,
+        "changed": 0,
+        "unreachable": 0,
+        "failed": 0
+      },
+      "ubuntu22": {
+        "ok": 259,
+        "changed": 0,
+        "unreachable": 0,
+        "failed": 0
+      },
+      "ubuntu24": {
+        "ok": 259,
+        "changed": 0,
+        "unreachable": 0,
+        "failed": 0
+      },
+      "ubuntu26": {
+        "ok": 259,
+        "changed": 0,
+        "unreachable": 0,
+        "failed": 0
+      },
+      "rocky9": {
+        "ok": 257,
+        "changed": 0,
+        "unreachable": 0,
+        "failed": 0
+      }
+    },
+    "network_reboot": {
+      "debian13": {
+        "ok": 221,
+        "changed": 1,
+        "unreachable": 0,
+        "failed": 0
+      },
+      "ubuntu22": {
+        "ok": 267,
+        "changed": 1,
+        "unreachable": 0,
+        "failed": 0
+      },
+      "ubuntu24": {
+        "ok": 267,
+        "changed": 1,
+        "unreachable": 0,
+        "failed": 0
+      },
+      "ubuntu26": {
+        "ok": 267,
+        "changed": 1,
+        "unreachable": 0,
+        "failed": 0
+      },
+      "rocky9": {
+        "ok": 260,
+        "changed": 1,
+        "unreachable": 0,
+        "failed": 0
+      }
+    },
+    "baseline_services_idempotence": {
+      "debian13": {
+        "ok": 83,
+        "changed": 0,
+        "unreachable": 0,
+        "failed": 0
+      },
+      "ubuntu22": {
+        "ok": 92,
+        "changed": 0,
+        "unreachable": 0,
+        "failed": 0
+      },
+      "ubuntu24": {
+        "ok": 92,
+        "changed": 0,
+        "unreachable": 0,
+        "failed": 0
+      },
+      "ubuntu26": {
+        "ok": 92,
+        "changed": 0,
+        "unreachable": 0,
+        "failed": 0
+      },
+      "rocky9": {
+        "ok": 109,
+        "changed": 0,
+        "unreachable": 0,
+        "failed": 0
+      }
+    },
+    "agents_idempotence": {
+      "debian13": {
+        "ok": 48,
+        "changed": 0,
+        "unreachable": 0,
+        "failed": 0
+      },
+      "ubuntu22": {
+        "ok": 51,
+        "changed": 0,
+        "unreachable": 0,
+        "failed": 0
+      },
+      "ubuntu24": {
+        "ok": 51,
+        "changed": 0,
+        "unreachable": 0,
+        "failed": 0
+      },
+      "ubuntu26": {
+        "ok": 51,
+        "changed": 0,
+        "unreachable": 0,
+        "failed": 0
+      },
+      "rocky9": {
+        "ok": 62,
+        "changed": 0,
+        "unreachable": 0,
+        "failed": 0
+      }
+    },
+    "sftp_idempotence": {
+      "debian13": {
+        "ok": 25,
+        "changed": 0,
+        "unreachable": 0,
+        "failed": 0
+      },
+      "ubuntu22": {
+        "ok": 26,
+        "changed": 0,
+        "unreachable": 0,
+        "failed": 0
+      },
+      "ubuntu24": {
+        "ok": 26,
+        "changed": 0,
+        "unreachable": 0,
+        "failed": 0
+      },
+      "ubuntu26": {
+        "ok": 26,
+        "changed": 0,
+        "unreachable": 0,
+        "failed": 0
+      },
+      "rocky9": {
+        "ok": 31,
+        "changed": 0,
+        "unreachable": 0,
+        "failed": 0
+      }
+    },
+    "firewall_traffic": {
+      "debian13": {
+        "ok": 22,
+        "changed": 0,
+        "unreachable": 0,
+        "failed": 0
+      },
+      "ubuntu22": {
+        "ok": 23,
+        "changed": 0,
+        "unreachable": 0,
+        "failed": 0
+      },
+      "ubuntu24": {
+        "ok": 23,
+        "changed": 0,
+        "unreachable": 0,
+        "failed": 0
+      },
+      "ubuntu26": {
+        "ok": 23,
+        "changed": 0,
+        "unreachable": 0,
+        "failed": 0
+      },
+      "rocky9": {
+        "ok": 23,
+        "changed": 3,
+        "unreachable": 0,
+        "failed": 0
+      }
+    }
+  },
+  "containers": {
+    "degit-smoke-debian13": {
+      "runs": [
+        {
+          "ok": 86,
+          "changed": 21,
+          "unreachable": 0,
+          "failed": 0
+        },
+        {
+          "ok": 86,
+          "changed": 0,
+          "unreachable": 0,
+          "failed": 0
+        }
+      ]
+    },
+    "degit-smoke-rocky9": {
+      "runs": [
+        {
+          "ok": 82,
+          "changed": 18,
+          "unreachable": 0,
+          "failed": 0
+        },
+        {
+          "ok": 82,
+          "changed": 0,
+          "unreachable": 0,
+          "failed": 0
+        }
+      ]
+    },
+    "degit-smoke-ubuntu22": {
+      "runs": [
+        {
+          "ok": 94,
+          "changed": 22,
+          "unreachable": 0,
+          "failed": 0
+        },
+        {
+          "ok": 94,
+          "changed": 0,
+          "unreachable": 0,
+          "failed": 0
+        }
+      ]
+    },
+    "degit-smoke-ubuntu24": {
+      "runs": [
+        {
+          "ok": 94,
+          "changed": 22,
+          "unreachable": 0,
+          "failed": 0
+        },
+        {
+          "ok": 94,
+          "changed": 0,
+          "unreachable": 0,
+          "failed": 0
+        }
+      ]
+    },
+    "degit-smoke-ubuntu26": {
+      "runs": [
+        {
+          "ok": 94,
+          "changed": 21,
+          "unreachable": 0,
+          "failed": 0
+        },
+        {
+          "ok": 94,
+          "changed": 0,
+          "unreachable": 0,
+          "failed": 0
+        }
+      ]
+    },
+    "degit-functional-dante-rocky9": {
+      "runs": [
+        {
+          "ok": 26,
+          "changed": 7,
+          "unreachable": 0,
+          "failed": 0
+        },
+        {
+          "ok": 26,
+          "changed": 0,
+          "unreachable": 0,
+          "failed": 0
+        }
+      ]
+    },
+    "degit-functional-dante-ubuntu22": {
+      "runs": [
+        {
+          "ok": 19,
+          "changed": 5,
+          "unreachable": 0,
+          "failed": 0
+        },
+        {
+          "ok": 19,
+          "changed": 0,
+          "unreachable": 0,
+          "failed": 0
+        }
+      ]
+    },
+    "degit-functional-dante-ubuntu24": {
+      "runs": [
+        {
+          "ok": 19,
+          "changed": 5,
+          "unreachable": 0,
+          "failed": 0
+        },
+        {
+          "ok": 19,
+          "changed": 0,
+          "unreachable": 0,
+          "failed": 0
+        }
+      ]
+    },
+    "degit-functional-dante-ubuntu26": {
+      "runs": [
+        {
+          "ok": 19,
+          "changed": 5,
+          "unreachable": 0,
+          "failed": 0
+        },
+        {
+          "ok": 19,
+          "changed": 0,
+          "unreachable": 0,
+          "failed": 0
+        }
+      ]
+    },
+    "degit-functional-wpad-debian13": {
+      "runs": [
+        {
+          "ok": 21,
+          "changed": 4,
+          "unreachable": 0,
+          "failed": 0
+        },
+        {
+          "ok": 20,
+          "changed": 0,
+          "unreachable": 0,
+          "failed": 0
+        }
+      ]
+    },
+    "degit-functional-wpad-rocky9": {
+      "runs": [
+        {
+          "ok": 22,
+          "changed": 4,
+          "unreachable": 0,
+          "failed": 0
+        },
+        {
+          "ok": 21,
+          "changed": 0,
+          "unreachable": 0,
+          "failed": 0
+        }
+      ]
+    },
+    "degit-functional-wpad-ubuntu22": {
+      "runs": [
+        {
+          "ok": 22,
+          "changed": 4,
+          "unreachable": 0,
+          "failed": 0
+        },
+        {
+          "ok": 21,
+          "changed": 0,
+          "unreachable": 0,
+          "failed": 0
+        }
+      ]
+    },
+    "degit-functional-wpad-ubuntu24": {
+      "runs": [
+        {
+          "ok": 22,
+          "changed": 4,
+          "unreachable": 0,
+          "failed": 0
+        },
+        {
+          "ok": 21,
+          "changed": 0,
+          "unreachable": 0,
+          "failed": 0
+        }
+      ]
+    },
+    "degit-functional-wpad-ubuntu26": {
+      "runs": [
+        {
+          "ok": 22,
+          "changed": 4,
+          "unreachable": 0,
+          "failed": 0
+        },
+        {
+          "ok": 21,
+          "changed": 0,
+          "unreachable": 0,
+          "failed": 0
+        }
+      ]
+    }
+  },
+  "sftp_transfer": [
+    {
+      "os": "debian13",
+      "returncode": 0,
+      "content_match": true
+    },
+    {
+      "os": "ubuntu22",
+      "returncode": 0,
+      "content_match": true
+    },
+    {
+      "os": "ubuntu24",
+      "returncode": 0,
+      "content_match": true
+    },
+    {
+      "os": "ubuntu26",
+      "returncode": 0,
+      "content_match": true
+    },
+    {
+      "os": "rocky9",
+      "returncode": 0,
+      "content_match": true
+    }
+  ],
+  "sftp_account_isolation": [
+    {
+      "os": "debian13",
+      "cross_account_login_rejected": true
+    },
+    {
+      "os": "ubuntu22",
+      "cross_account_login_rejected": true
+    },
+    {
+      "os": "ubuntu24",
+      "cross_account_login_rejected": true
+    },
+    {
+      "os": "ubuntu26",
+      "cross_account_login_rejected": true
+    },
+    {
+      "os": "rocky9",
+      "cross_account_login_rejected": true
+    }
+  ],
+  "exceptions": [
+    "Dante is not packaged in Debian 13 stable; role rejects this platform before mutation (changed=0).",
+    "Real RHEL and application-specific production integrations were not acceptance-tested."
+  ],
+  "artifact_sha256": "0a0baf2b57e9091d6f6cb9bffcdfd09291350d7800ff8e1c106ee4220b888d4a",
+  "lab_cleanup": {
+    "owned_vms_removed": 5,
+    "seed_isos_and_image_downloads_removed": true,
+    "test_namespace_removed": true,
+    "temporary_cluster_token_deleted": true
+  },
+  "scope_notes": [
+    "Certbot credential derivation and pre-fact NGINX defaults have unit coverage; ACME issuance and the full NGINX role were not live acceptance-tested."
+  ]
+}

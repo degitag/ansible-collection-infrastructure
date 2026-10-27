@@ -1,34 +1,7 @@
 ---
-- name: Configure proxy in /etc/environment
-  ansible.builtin.template:
-    src: environment.j2
-    dest: "/etc/environment"
-    owner: root
-    group: root
-    mode: "0644"
-  become: true
-  tags: proxy
-
-- name: Configure apt proxy
-  ansible.builtin.template:
-    src: apt_proxy.j2
-    dest: "/etc/apt/apt.conf.d/90curtin-aptproxy"
-    owner: root
-    group: root
-    mode: "0644"
-  when: ansible_os_family == "Debian"
-  become: true
-  tags: proxy
-
-- name: Copy template curl and wget rc files
-  ansible.builtin.template:
-    src: "{{ item }}.j2"
-    dest: "/etc/{{ item }}"
-    owner: root
-    group: root
-    mode: "0644"
-  with_items:
-  - curlrc
-  - wgetrc
-  become: true
+- name: Prepare facts and platform variables
+  ansible.builtin.import_tasks: preflight.yml
+  tags: always
+- name: Apply proxy configuration
+  ansible.builtin.import_tasks: configuration.yml
   tags: proxy

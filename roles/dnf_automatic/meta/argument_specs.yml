@@ -54,7 +54,7 @@ argument_specs:
         description:
         - Controls `dnf_automatic_email_port` for the `dnf_automatic` role.
         required: false
-        type: str
+        type: int
       dnf_automatic_email_auth:
         description:
         - Controls `dnf_automatic_email_auth` for the `dnf_automatic` role.
@@ -70,6 +70,7 @@ argument_specs:
         - Controls `dnf_automatic_email_password` for the `dnf_automatic` role.
         required: false
         type: str
+        no_log: true
       dnf_automatic_download_updates:
         description:
         - Controls `dnf_automatic_download_updates` for the `dnf_automatic` role.

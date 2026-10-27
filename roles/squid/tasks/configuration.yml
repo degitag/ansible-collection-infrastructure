@@ -1,0 +1,119 @@
+---
+- name: Validate supported platform
+  ansible.builtin.assert:
+    that:
+    - ansible_facts.os_family in ["Debian", "RedHat"]
+    fail_msg: The squid role supports Debian and RedHat families only.
+  tags: squid
+
+- name: Install Squid package
+  ansible.builtin.package:
+    name: '{{ squid_package_name }}'
+    state: present
+    policy_rc_d: "{{ 101 if ansible_facts.os_family == 'Debian' and not (squid_manage_service | bool and squid_service_state == 'started') else omit }}"
+  environment: '{{ proxy_env }}'
+  become: true
+  tags: squid
+
+- name: Install SELinux tooling for Squid
+  ansible.builtin.package:
+    name: '{{ squid_selinux_packages }}'
+    state: present
+    policy_rc_d: "{{ 101 if ansible_facts.os_family == 'Debian' and not (squid_manage_service | bool and squid_service_state == 'started') else omit }}"
+  when:
+  - ansible_facts.os_family == "RedHat"
+  - squid_manage_selinux | bool
+  - ansible_facts.selinux is defined
+  - ansible_facts.selinux.status == "enabled"
+  become: true
+  tags: squid
+
+- name: Ensure Squid configuration directories exist
+  ansible.builtin.file:
+    path: '{{ item }}'
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  loop:
+  - '{{ squid_config_dir }}'
+  - '{{ squid_conf_d_dir }}'
+  become: true
+  tags: squid
+
+- name: Remove obsolete default config files
+  ansible.builtin.file:
+    path: '{{ squid_config_dir }}/{{ item }}'
+    state: absent
+  loop:
+  - cachemgr.conf.default
+  - errorpage.css.default
+  - mime.conf.default
+  - squid.conf.default
+  become: true
+  tags: squid
+
+- name: Render Squid ACL file entries
+  ansible.builtin.template:
+    src: acl_file.j2
+    dest: '{{ squid_conf_d_dir }}/{{ item.name }}.lst'
+    owner: root
+    group: root
+    mode: '0644'
+  loop: '{{ squid_acl_files }}'
+  loop_control:
+    label: '{{ item.name }}'
+  notify: Reload squid
+  become: true
+  tags: squid
+
+- name: Deploy Squid configuration
+  ansible.builtin.template:
+    src: squid.conf.j2
+    dest: '{{ squid_config_path }}'
+    owner: root
+    group: root
+    mode: '0644'
+    validate: '{{ squid_validate_binary }} -k parse -f %s'
+  notify: Reload squid
+  become: true
+  tags: squid
+
+- name: Manage squid ports through the firewall role
+  ansible.builtin.include_role:
+    name: degitag.infrastructure.firewall
+    apply:
+      tags: squid
+  vars:
+    firewall_manage_activation: false
+    firewall_rules:
+    - port: '{{ squid_port }}'
+      protocol: tcp
+      action: allow
+      comment: Squid proxy
+      zone: '{{ squid_firewall_zone | default("public") }}'
+  when:
+  - squid_manage_firewall | bool
+  tags: squid
+- name: Allow Squid port in SELinux
+  community.general.seport:
+    ports: '{{ squid_port }}'
+    proto: tcp
+    setype: '{{ squid_selinux_port_type }}'
+    state: present
+  when:
+  - ansible_facts.os_family == "RedHat"
+  - squid_manage_selinux | bool
+  - ansible_facts.selinux is defined
+  - ansible_facts.selinux.status == "enabled"
+  become: true
+  tags: squid
+
+- name: Ensure Squid service state
+  ansible.builtin.service:
+    name: '{{ squid_service_name }}'
+    enabled: '{{ squid_service_enabled }}'
+    state: '{{ squid_service_state }}'
+  when: squid_manage_service | bool
+  become: true
+  tags: squid

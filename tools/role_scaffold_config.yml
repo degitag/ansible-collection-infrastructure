@@ -1,24 +1,26 @@
 ---
-collection_namespace: onkeldom
-collection_name: default_server
-min_ansible_version: "2.16"
+collection_namespace: degitag
+collection_name: infrastructure
+min_ansible_version: '2.20'
 common_platforms:
-- name: Ubuntu
-  display: Ubuntu 22.04+
-  versions:
+- &id001
+  name: Ubuntu
+  display: Ubuntu 22.04, 24.04, 26.04
+  versions: &id004
   - jammy
   - noble
-- name: Debian
-  display: Debian 12+
+  - resolute
+- &id002
+  name: Debian
+  display: Debian 13
   versions:
-  - bookworm
-- name: EL
-  display: RHEL 9+
-  versions:
-  - "9"
+  - trixie
+- &id003
+  name: EL
+  display: Rocky Linux 9 / RHEL 9
+  versions: &id005
+  - '9'
 role_descriptions:
-  k3s_addons: Render and deploy configured Kubernetes addons onto an existing K3s cluster.
-  alloy: Install and configure Grafana Alloy as a client-side telemetry agent.
   apache: Install and configure Apache HTTP Server and virtual hosts.
   apt_repos: Manage APT repository definitions and signing keys on Debian-based systems.
   auditd: Manage additional auditd rules.
@@ -32,11 +34,8 @@ role_descriptions:
   dnf_automatic: Configure automatic package updates on EL systems.
   dnf_repos: Manage YUM and DNF repository definitions and signing keys on EL systems.
   fail2ban: Install and configure Fail2ban jails and actions.
-  firewalld: Manage firewalld services, zones, and rules on EL systems.
   haproxy: Install and configure HAProxy load balancers and TLS assets.
   hosts: Manage hostname-related entries in /etc/hosts.
-  ifcfg: Manage legacy ifcfg-based network configuration on EL systems.
-  interfaces: Manage /etc/network/interfaces based network configuration.
   keepalived: Install and configure Keepalived VRRP instances and helper scripts.
   lvm: Create and manage LVM volume groups and logical volumes.
   logrotate: Manage custom logrotate rules for application and service logs.
@@ -45,10 +44,7 @@ role_descriptions:
   msmtp: Configure msmtp relay accounts and aliases.
   multipath: Configure device-mapper multipath on supported Linux systems.
   nfs: Configure NFS server exports and client mounts.
-  netplan: Manage netplan configuration on Debian and Ubuntu.
   nginx: Install and configure NGINX and virtual hosts.
-  nmcli: Manage NetworkManager connections with community.general.nmcli.
-  node_exporter: Install and configure Prometheus node_exporter.
   packages: Install and remove packages from aggregated package lists.
   proxy: Configure proxy environment files for system tools.
   qemu_guest_agent: Install the QEMU guest agent package.
@@ -62,12 +58,16 @@ role_descriptions:
   sysctl: Manage sysctl kernel parameters.
   telegraf: Install and configure Telegraf with plugin definitions.
   traefik: Install and configure Traefik reverse proxies and routing rules.
-  ufw: Manage UFW rules and defaults on Debian and Ubuntu.
   unbound: Install and configure the Unbound DNS resolver and local zones.
   unattended_updates: Configure unattended upgrades on Debian and Ubuntu.
   users: Manage local users, SSH keys, and shell dotfiles.
   vmware_tools: Install open-vm-tools on supported Linux systems.
   wpad: Manage a proxy auto-configuration file and publish it through Apache or NGINX.
+  firewall: Manage a common firewall rule API through UFW or firewalld.
+  network: Translate a common network API to Netplan, ifupdown or NetworkManager.
+  gui: Install an explicitly enabled distribution-specific graphical desktop.
+  conditional_reboot: Schedule requirement-based reboots within an explicit maintenance window.
+  prompt: Configure an interactive Bash prompt and optional operator helpers.
 role_galaxy_tags:
   apt_repos:
   - apt
@@ -91,218 +91,451 @@ role_galaxy_tags:
   - packages
   - rhel
 role_example_playbooks:
-  apt_repos: |
-    - name: Configure third-party APT repositories
-      hosts: debian_hosts
-      become: true
-      roles:
-        - role: onkeldom.default_server.apt_repos
-          vars:
-            apt_repos_list:
-              - name: docker
-                uris:
-                  - https://download.docker.com/linux/{{ ansible_distribution | lower }}
-                suites:
-                  - "{{ ansible_distribution_release }}"
-                components:
-                  - stable
-                architectures:
-                  - "{{ ansible_architecture }}"
-                key_url: https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg
-              - name: hashicorp
-                uris:
-                  - https://apt.releases.hashicorp.com
-                suites:
-                  - "{{ ansible_distribution_release }}"
-                components:
-                  - main
-                key_url: https://apt.releases.hashicorp.com/gpg
-  dnf_repos: |
-    - name: Configure custom EL repositories
-      hosts: el_hosts
-      become: true
-      roles:
-        - role: onkeldom.default_server.dnf_repos
-          vars:
-            dnf_repos_list:
-              - name: epel
-                description: Extra Packages for Enterprise Linux 9
-                metalink: https://mirrors.fedoraproject.org/metalink?repo=epel-9&arch=$basearch
-                gpgcheck: true
-                gpgkey_url: https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-9
-              - name: internal-base
-                description: Internal Base Repository
-                baseurl: https://repo.example.com/el9/baseos/$basearch
-                enabled: true
-                gpgcheck: true
-                key_path: /etc/pki/rpm-gpg/RPM-GPG-KEY-internal-base
-                gpgkey_url: https://repo.example.com/keys/RPM-GPG-KEY-internal-base
-  docker: |
-    - name: Install and configure Docker Engine
-      hosts: container_hosts
-      become: true
-      roles:
-        - role: onkeldom.default_server.docker
-          vars:
-            docker_users:
-              - deploy
-            docker_daemon_config:
-              log-driver: json-file
-              log-opts:
-                max-size: "10m"
-                max-file: "3"
-  logrotate: |
-    - name: Configure custom log rotation policies
-      hosts: linux_hosts
-      become: true
-      roles:
-        - role: onkeldom.default_server.logrotate
-          vars:
-            logrotate_rules:
-              - name: myapp
-                paths:
-                  - /var/log/myapp/*.log
-                frequency: daily
-                rotate: 14
-                compress: true
-                delaycompress: true
-                create: true
-                create_mode: "0640"
-                create_owner: myapp
-                create_group: myapp
-                sharedscripts: true
-                postrotate: |
-                  systemctl reload myapp.service >/dev/null 2>&1 || true
+  apt_repos: "- name: Configure third-party APT repositories\n  hosts: debian_hosts\n  become: true\n  gather_facts: true\n  roles:\n    - role: degitag.infrastructure.apt_repos\n      vars:\n        apt_repos_list:\n          - name: docker\n            uris:\n              - https://download.docker.com/linux/{{ ansible_distribution | lower }}\n            suites:\n              - \"{{ ansible_distribution_release }}\"\n            components:\n              - stable\n            architectures:\n              - \"{{ ansible_architecture }}\"\n            key_url: https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg\n          - name: hashicorp\n            uris:\n              - https://apt.releases.hashicorp.com\n            suites:\n              - \"{{ ansible_distribution_release }}\"\n            components:\n              - main\n            key_url: https://apt.releases.hashicorp.com/gpg\n"
+  dnf_repos: "- name: Configure custom EL repositories\n  hosts: el_hosts\n  become: true\n  gather_facts: true\n  roles:\n    - role: degitag.infrastructure.dnf_repos\n      vars:\n        dnf_repos_list:\n          - name: epel\n            description: Extra Packages for Enterprise Linux 9\n            metalink: https://mirrors.fedoraproject.org/metalink?repo=epel-9&arch=$basearch\n            gpgcheck: true\n            gpgkey_url: https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-9\n          - name: internal-base\n            description: Internal Base Repository\n            baseurl: https://repo.example.com/el9/baseos/$basearch\n            enabled: true\n            gpgcheck: true\n            key_path: /etc/pki/rpm-gpg/RPM-GPG-KEY-internal-base\n            gpgkey_url: https://repo.example.com/keys/RPM-GPG-KEY-internal-base\n"
+  docker: "- name: Install and configure Docker Engine\n  hosts: container_hosts\n  become: true\n  gather_facts: true\n  roles:\n    - role: degitag.infrastructure.docker\n      vars:\n        docker_users:\n          - deploy\n        docker_daemon_config:\n          log-driver: json-file\n          log-opts:\n            max-size: \"10m\"\n            max-file: \"3\"\n"
+  logrotate: "- name: Configure custom log rotation policies\n  hosts: linux_hosts\n  become: true\n  gather_facts: true\n  roles:\n    - role: degitag.infrastructure.logrotate\n      vars:\n        logrotate_rules:\n          - name: myapp\n            paths:\n              - /var/log/myapp/*.log\n            frequency: daily\n            rotate: 14\n            compress: true\n            delaycompress: true\n            create: true\n            create_mode: \"0640\"\n            create_owner: myapp\n            create_group: myapp\n            sharedscripts: true\n            postrotate: |\n              systemctl reload myapp.service >/dev/null 2>&1 || true\n"
+  firewall: "- name: Configure host firewall\n  hosts: servers\n  become: true\n  gather_facts: true\n  roles:\n    - role: degitag.infrastructure.firewall\n      vars:\n        firewall_rules:\n          - port: '22'\n            protocol: tcp\n            source: 192.0.2.0/24\n            comment: Administration\n          - port: '443'\n            protocol: tcp"
+  network: "- name: Render portable network configuration\n  hosts: servers\n  become: true\n  gather_facts: true\n  roles:\n    - role: degitag.infrastructure.network\n      vars:\n        network_apply: false\n        network_interfaces:\n          - name: ens18\n            addresses4: [192.0.2.10/24]\n            gateway4: 192.0.2.1\n            dns: [192.0.2.53]\n            search: [example.net]"
+  sssd: "- name: Join directory members\n  hosts: directory_members\n  become: true\n  gather_facts: true\n  roles:\n    - role: degitag.infrastructure.sssd\n      vars:\n        sssd_domain_name: example.net\n        sssd_join_domain: true\n        sssd_bind_user: \"{{ vault_directory_join_user }}\"\n        sssd_bind_password: \"{{ vault_directory_join_password }}\""
+  borgbackup: "- name: Configure encrypted local backups\n  hosts: backup_clients\n  become: true\n  gather_facts: true\n  roles:\n    - role: degitag.infrastructure.borgbackup\n      vars:\n        borgbackup_manage_repository: true\n        borgbackup_manage_cron: true\n        borgbackup_encryption_passphrase: \"{{ vault_borg_passphrase }}\""
+  msmtp: "- name: Configure explicit system mail relay\n  hosts: servers\n  become: true\n  gather_facts: true\n  roles:\n    - role: degitag.infrastructure.msmtp\n      vars:\n        msmtp_default_account: relay\n        msmtp_accounts:\n          - name: relay\n            host: smtp.example.net\n            port: 587\n            from: servers@example.net\n            auth: \"on\"\n            user: \"{{ vault_smtp_user }}\"\n            password: \"{{ vault_smtp_password }}\""
+  conditional_reboot: "- name: Configure maintenance reboot policy\n  hosts: maintenance_hosts\n  become: true\n  gather_facts: true\n  roles:\n    - role: degitag.infrastructure.conditional_reboot\n      vars:\n        conditional_reboot_enabled: true\n        conditional_reboot_time:\n          hour: 4\n          minute: 0\n"
+  prompt: "- name: Configure operator prompt\n  hosts: linux_hosts\n  become: true\n  gather_facts: true\n  roles:\n    - role: degitag.infrastructure.prompt\n"
 role_platform_overrides:
   certbot:
-  - name: Ubuntu
-    display: Ubuntu 22.04+
-    versions:
-    - jammy
-    - noble
-  - name: Debian
-    display: Debian 12+
-    versions:
-    - bookworm
-  - name: EL
-    display: RHEL 9+
-    versions:
-    - "9"
+  - *id001
+  - *id002
+  - *id003
   dnf_automatic:
-  - name: EL
-    display: RHEL 9+
-    versions:
-    - "9"
+  - *id003
   dnf_repos:
-  - name: EL
-    display: RHEL 9+
-    versions:
-    - "9"
+  - *id003
   apt_repos:
-  - name: Ubuntu
-    display: Ubuntu 22.04+
-    versions:
-    - jammy
-    - noble
-  - name: Debian
-    display: Debian 12+
-    versions:
-    - bookworm
-  firewalld:
-  - name: EL
-    display: RHEL 9+
-    versions:
-    - "9"
-  ifcfg:
-  - name: EL
-    display: RHEL 9+
-    versions:
-    - "9"
-  interfaces:
-  - name: Ubuntu
-    display: Ubuntu 22.04+
-    versions:
-    - jammy
-    - noble
-  - name: Debian
-    display: Debian 12+
-    versions:
-    - bookworm
-  netplan:
-  - name: Ubuntu
-    display: Ubuntu 22.04+
-    versions:
-    - jammy
-    - noble
-  - name: Debian
-    display: Debian 12+
-    versions:
-    - bookworm
-  nmcli:
-  - name: Ubuntu
-    display: Ubuntu 22.04+
-    versions:
-    - jammy
-    - noble
-  - name: Debian
-    display: Debian 12+
-    versions:
-    - bookworm
-  - name: EL
-    display: RHEL 9+
-    versions:
-    - "9"
+  - *id001
+  - *id002
   qemu_guest_agent:
-  - name: Ubuntu
-    display: Ubuntu 22.04+
-    versions:
-    - jammy
-    - noble
-  - name: Debian
-    display: Debian 12+
-    versions:
-    - bookworm
-  - name: EL
-    display: RHEL 9+
-    versions:
-    - "9"
+  - *id001
+  - *id002
+  - *id003
   systemd_resolved:
-  - name: Ubuntu
-    display: Ubuntu 22.04+
-    versions:
-    - jammy
-    - noble
-  - name: Debian
-    display: Debian 12+
-    versions:
-    - bookworm
+  - *id001
+  - *id002
   systemd_timesyncd:
-  - name: Ubuntu
-    display: Ubuntu 22.04+
-    versions:
-    - jammy
-    - noble
-  - name: Debian
-    display: Debian 12+
-    versions:
-    - bookworm
-  ufw:
-  - name: Ubuntu
-    display: Ubuntu 22.04+
-    versions:
-    - jammy
-    - noble
-  - name: Debian
-    display: Debian 12+
-    versions:
-    - bookworm
+  - *id001
+  - *id002
   unattended_updates:
+  - *id001
+  - *id002
+  dante:
   - name: Ubuntu
-    display: Ubuntu 22.04+
-    versions:
-    - jammy
-    - noble
-  - name: Debian
-    display: Debian 12+
-    versions:
-    - bookworm
+    display: Ubuntu 22.04, 24.04, 26.04
+    versions: *id004
+  - name: EL
+    display: Rocky Linux 9 / RHEL 9
+    versions: *id005
+role_notes:
+  firewall: 'The portable API manages inbound TCP/UDP port rules, optional source/destination CIDRs and allow/deny/reject actions. Rules are additive; remove an owned rule explicitly with state: absent. A service role only adds its own rules and never resets the host policy. UFW activation is opt-in via firewall_manage_activation. firewalld needs a running daemon for immediate rules. Zone selection is firewalld-specific; interface matching is UFW-specific. Do not assume an interface filter is translated into a zone. The default incoming policy currently applies to UFW only. firewall_trusted_sources explicitly trusts entire CIDRs, including forwarding; use only for private pod/service networks. Trust assignments are additive and require explicit native removal when decommissioned.'
+  network: 'Ubuntu defaults to Netplan/networkd, Debian to ifupdown and Rocky/RHEL to NetworkManager. Supported interface types: ethernet, VLAN, bridge and bond; IPv4/IPv6, DHCP, DNS, gateways and static routes. Empty input does nothing. Only the managed fragment/profiles are owned; existing external files are never wiped. Render and validate first, then explicitly set network_apply: true. This does not disable existing managers or migrate a live management interface automatically. With network_apply: false, NetworkManager uses native module check mode and does not persist or activate profiles; Netplan and ifupdown write validated fragments. Use a console for activation. Interrupted runs are reconciled from current interface state. Existing active NetworkManager profiles for declared interfaces are reused rather than creating competing profiles.'
+  packages: Installs a conservative platform baseline plus group, host and playbook additions. Package removal and EPEL installation are opt-in. Override packages_defaults_install to replace the baseline; no role variables override inventory inputs.
+  sssd: Requires an explicit directory domain. Domain joins additionally require operator credentials. Without a configured domain the role stops before modifying accounts, PAM, sudo or SSH.
+  dante: 'Debian 13 is explicitly excluded because its stable repositories do not provide dante-server or dante-client. The preflight rejects Debian 13 before mutation. Ubuntu and EL9 use their packaged server and native validator. On Rocky/RHEL 9, the role enables the signed Fedora EPEL 9 repository through dnf_repos by default; set dante_manage_epel: false to use an operator-provided package source. RHEL requires valid base/AppStream repositories and any applicable CodeReady Builder entitlement.'
+  fail2ban: ' On Rocky/RHEL 9, the role enables the signed Fedora EPEL 9 repository through dnf_repos by default; set fail2ban_manage_epel: false to use an operator-provided package source. RHEL requires valid base/AppStream repositories and any applicable CodeReady Builder entitlement.'
+  borgbackup: ' On Rocky/RHEL 9, the role enables the signed Fedora EPEL 9 repository through dnf_repos by default; set borgbackup_manage_epel: false to use an operator-provided package source. RHEL requires valid base/AppStream repositories and any applicable CodeReady Builder entitlement. Local repository initialization and cron scheduling are opt-in. Encrypted repositories require an explicit passphrase; repository and script permissions restrict access to root. Archive timestamps are evaluated by Borg at backup time.'
+  borgmatic: ' On Rocky/RHEL 9, the role enables the signed Fedora EPEL 9 repository through dnf_repos by default; set borgmatic_manage_epel: false to use an operator-provided package source. RHEL requires valid base/AppStream repositories and any applicable CodeReady Builder entitlement. The uv bootstrap installer is pinned by version and SHA256; update both values together.'
+  motd: Renders one validated POSIX shell script for the native login integration. Optional address facts are displayed as unavailable. The deployment timestamp is read from file metadata at login, so a repeated Ansible run does not rewrite the message. Vendor messages are removed only when explicitly requested.
+  resolvconf: Static resolv.conf ownership is opt-in via resolvconf_manage_config and requires explicit resolver addresses. Keep it disabled when DHCP, NetworkManager or systemd-resolved owns DNS. Bind-mounted container resolver files additionally require an explicit resolvconf_unsafe_writes opt-in.
+  msmtp: Requires explicit SMTP accounts and a valid selected default account. Configurations containing credentials are root-readable only and hidden from task output. The role does not send test messages.
+  sftp_server: SFTP account homes are paths inside their chroot. Public keys are stored in separate root-owned files under sftp_server_authorized_keys_dir and selected by AuthorizedKeysFile %u; users never share a host-level home key file. The role validates the fragment and complete sshd configuration, ensures the fragment is included, and respects manage_service. On SELinux systems it labels chroots/keys and enables the chroot write boolean for configured users.
+  users: Root dotfiles and the optional third-party powerline-go binary are disabled by default. Enable them explicitly for the intended operator environment; local accounts and sudo rules remain the primary role responsibility.
+  auditd: Installs the native audit package and manages its session rule file. Existing kernel rules are not globally reset unless auditd_reset_existing_rules is explicitly enabled. Extra rules are rendered deterministically and removed when absent from input. EL9 uses the supported service auditd control path. Default rules and extra rules use owned degit-* keys; only those keys are replaced on reload. Additional rules must carry a degit-* key. Unrelated audit rules are preserved. Legacy unprefixed keys disappear at the next reboot or an explicitly requested full reset. Command and session rule groups can be disabled independently. Explicit auditd_remove_legacy_shell_rules migrates the old UKHD logging.rules file and shell_history execve keys. Active removal is scoped to owned execve keys; locked rules fail visibly and require an operator-controlled reboot. It never reboots or resets unrelated rules.
+  haproxy: With no listeners/frontends configured, the default leaves the service stopped and disabled. Define frontends or listens before enabling traffic. Configuration is validated by the native HAProxy binary.
+  traefik: Uses the pinned Traefik v3 release and verifies the upstream archive checksum. Static configuration changes restart the service. Dynamic files use the file provider watcher; if watching is disabled, their changes trigger a restart. No unsupported systemd reload action is invoked.
+  certbot: Certificate issuance is opt-in through certbot_certs. Supply an ACME email and provider credentials via Vault before requesting certificates. Cloudflare token selection runs before legacy-key derivation and is hidden from logs. On EL9 the role configures signed EPEL through dnf_repos unless certbot_manage_epel is false. Issuance and renewals require separate DNS/provider acceptance tests.
+  proxy: 'Normalizes backslashes and special characters in URL credentials without double-encoding existing percent escapes. Exposes proxy_environment for Ansible task environments; login environment files do not update an already-running Ansible process. Manages only the global proxy key in /etc/pip.conf and preserves other pip settings. Empty input removes the managed pip proxy setting. HTTP(S)/ALL_PROXY and NO_PROXY are emitted in both cases. Explicit pip proxy configuration does not provide a separate per-host bypass setting; use a task environment and proxy_manage_pip: false when NO_PROXY behavior is required. Secrets remain in root-owned tool configuration readable by their users; task output is suppressed.'
+  docker: 'Docker proxy input defaults to proxy_env, or set docker_proxy_env explicitly. URLs use the shared normalizer. A root-readable systemd drop-in sets both variable cases; percent signs are escaped for systemd. Disabled proxies remove only the owned http-proxy.conf drop-in. Handlers are flushed before the role returns so later image pulls use the new configuration. docker_manage_proxy: false leaves proxy ownership elsewhere; do not mix this drop-in with daemon.json proxies.'
+  conditional_reboot: 'Disabled by default. Uses local host time and a bounded maintenance window; missed timer runs are not replayed. Debian/Ubuntu use reboot-required; EL9 uses needs-restarting -r (dnf-utils). A failed requirement check refuses to reboot. The Python controller supports --dry-run and logs without shell interpolation. A disabled configuration cannot reboot even if its service is manually invoked. conditional_reboot_manage_service: false renders artifacts without reloading or activating timers. Remove the old UKHD /usr/local/bin/reboot-check.sh separately after migration; the unit now uses one consistent script path. Test activation and actual reboot on a disposable VM.'
+  prompt: Interactive Bash only. Git prompt helper is included locally; optional SSH agent, root dotfiles, bcrypt and yq are independent explicit choices. yq downloads require a pinned version and SHA256 checksum. The bcrypt helper requires Python bcrypt at runtime. No personal configuration is installed unless requested. Coordinate ownership with users_manage_root_dotfiles and users powerline-go; only one role should own each prompt or dotfile.
+  ca: 'Validates nonempty certificate source matches by default, creates the platform trust directory and verifies deployed certificates using OpenSSL against the native trust bundle after updating trust. Set ca_require_certificates: false for intentionally empty input. Check mode does not run verification against files not yet deployed.'
+  sshd: Prefers modern AEAD ciphers; AES-CTR remains for compatible clients. EL9 uses an AES-only platform list to avoid advertising ChaCha20 in FIPS environments; this is not a compliance certification. Override sshd_server_* inputs deliberately when site crypto policy differs. Ubuntu SSH socket activation is disabled for custom ports when sshd_disable_socket_activation is true and service management is enabled. Existing Match exceptions belong in sshd_server_match_blocks; no UKHD accounts are hard-coded.
+  nginx: 'Supports TCP/UDP stream upstreams, maps and servers in addition to HTTP. Installs and loads the distribution stream module only when stream declarations are configured. Set nginx_manage_stream_module: false for an external/static module source and configure nginx_extra_conf_options as required. The complete configuration is validated with nginx -t before restart.'
+role_argument_overrides:
+  packages:
+    packages_defaults_install:
+      type: list
+      elements: str
+      description:
+      - Baseline packages selected from the platform layer; override to replace the baseline.
+  network:
+    network_backend:
+      type: str
+      description:
+      - Select auto or an explicit supported network backend.
+      choices:
+      - auto
+      - netplan
+      - interfaces
+      - nmcli
+    network_interfaces:
+      type: list
+      description:
+      - Portable interface declarations, compiled before any changes.
+      elements: dict
+      options:
+        name:
+          type: str
+          description:
+          - Linux interface name.
+          required: true
+        type:
+          type: str
+          description:
+          - Interface kind.
+          choices:
+          - ethernet
+          - bridge
+          - bond
+          - vlan
+        dhcp4:
+          type: bool
+          description:
+          - Request an IPv4 address through DHCP.
+        dhcp6:
+          type: bool
+          description:
+          - Request an IPv6 address through DHCP.
+        addresses4:
+          type: list
+          description:
+          - IPv4 addresses in CIDR notation.
+          elements: str
+        addresses6:
+          type: list
+          description:
+          - IPv6 addresses in CIDR notation.
+          elements: str
+        gateway4:
+          type: str
+          description:
+          - Default IPv4 next hop.
+        gateway6:
+          type: str
+          description:
+          - Default IPv6 next hop.
+        dns:
+          type: list
+          description:
+          - Resolver IPv4 or IPv6 addresses.
+          elements: str
+        search:
+          type: list
+          description:
+          - DNS search domains.
+          elements: str
+        mtu:
+          type: int
+          description:
+          - Interface MTU.
+        members:
+          type: list
+          description:
+          - Declared bridge or bond member interfaces.
+          elements: str
+        parent:
+          type: str
+          description:
+          - Declared parent of a VLAN.
+        vlan_id:
+          type: int
+          description:
+          - 802.1Q VLAN identifier.
+        bond_mode:
+          type: str
+          description:
+          - Bonding mode.
+          choices:
+          - active-backup
+          - balance-rr
+          - balance-xor
+          - broadcast
+          - 802.3ad
+          - balance-tlb
+          - balance-alb
+        routes4:
+          type: list
+          description:
+          - Static IPv4 routes.
+          elements: dict
+          options: &id006
+            to:
+              type: str
+              description:
+              - Destination CIDR.
+              required: true
+            via:
+              type: str
+              description:
+              - Next-hop address.
+              required: true
+            metric:
+              type: int
+              description:
+              - Route preference metric.
+        routes6:
+          type: list
+          description:
+          - Static IPv6 routes.
+          elements: dict
+          options: *id006
+    network_apply:
+      type: bool
+      description:
+      - Activate changed network configuration; requires console recovery access.
+    network_profile_name:
+      type: str
+      description:
+      - Ownership name for the managed configuration fragment.
+    network_manage_service:
+      type: bool
+      description:
+      - Start and enable the selected network manager when needed.
+    network_allow_backend_migration:
+      type: bool
+      description:
+      - Explicitly permit a planned backend migration; does not disable competing managers.
+  firewall:
+    firewall_backend:
+      type: str
+      description:
+      - Select the native firewall backend.
+      choices:
+      - auto
+      - ufw
+      - firewalld
+    firewall_rules:
+      type: list
+      description:
+      - Additive inbound port rules; explicitly remove a rule with state absent.
+      elements: dict
+      options:
+        port:
+          type: str
+          description:
+          - Port number or ascending range.
+          required: true
+        protocol:
+          type: str
+          description:
+          - Layer-4 protocol.
+          choices:
+          - tcp
+          - udp
+        action:
+          type: str
+          description:
+          - Traffic disposition.
+          choices:
+          - allow
+          - deny
+          - reject
+        state:
+          type: str
+          description:
+          - Presence of this exact owned rule.
+          choices:
+          - present
+          - absent
+        source:
+          type: str
+          description:
+          - Optional source address or CIDR; defaults to any.
+        destination:
+          type: str
+          description:
+          - Optional destination address or CIDR; defaults to any.
+        interface:
+          type: str
+          description:
+          - Inbound interface match, UFW only.
+        zone:
+          type: str
+          description:
+          - firewalld zone; defaults to firewall_zone.
+        comment:
+          type: str
+          description:
+          - Operator-facing rule description for UFW.
+        direction:
+          type: str
+          description:
+          - Portable rules are inbound only.
+          choices:
+          - in
+    firewall_service_state:
+      type: str
+      description:
+      - Desired daemon state.
+      choices:
+      - started
+      - stopped
+    firewall_trusted_sources:
+      type: list
+      elements: str
+      description:
+      - 'Explicitly trusted CIDRs. Allows all input and forwarding from these networks; intended only for private cluster pod/service networks. Additive: removing a CIDR from this list does not revoke an existing trust assignment.'
+  sssd:
+    sssd_domain_name:
+      type: str
+      required: true
+      description:
+      - Required directory domain. An empty domain fails before changing identity or PAM configuration.
+    sssd_ad_group_allowed_ssh:
+      type: list
+      elements: str
+      description:
+      - Additional login-only groups; these groups never receive sudo privileges.
+  auditd:
+    auditd_service_state:
+      type: str
+      choices:
+      - started
+      - stopped
+      description:
+      - Desired audit daemon runtime state. EL9 uses the supported service control interface.
+  nfs:
+    nfs_service_enabled:
+      type: bool
+      description:
+      - Enable the NFS server on boot when exports are configured.
+  msmtp:
+    msmtp_accounts:
+      type: list
+      elements: dict
+      required: true
+      description:
+      - Required operator-provided relay accounts. No placeholder credentials or relay endpoint is installed by default.
+  haproxy:
+    haproxy_service_enabled:
+      type: bool
+      description:
+      - Enable the service when listeners or frontends are configured.
+  users:
+    users_groups:
+      type: list
+      elements: dict
+      options:
+        name:
+          type: str
+          required: true
+        state:
+          type: str
+          choices:
+          - present
+          - absent
+        system:
+          type: bool
+  conditional_reboot:
+    conditional_reboot_time:
+      type: dict
+      options:
+        hour:
+          type: int
+          required: true
+        minute:
+          type: int
+          required: true
+    conditional_reboot_day_of_month_range:
+      type: list
+      elements: int
+  proxy:
+    proxy_env:
+      type: dict
+      description:
+      - HTTP(S)/ALL_PROXY URLs and NO_PROXY bypass values. Credentials are normalized without double encoding.
+  docker:
+    docker_proxy_env:
+      type: dict
+      description:
+      - HTTP(S)/ALL_PROXY URLs and NO_PROXY bypass values. Credentials are normalized without double encoding.
+  nginx:
+    nginx_streams:
+      type: list
+      elements: dict
+      description:
+      - Optional native stream declarations; see migration examples.
+      options:
+        name:
+          type: str
+          required: true
+        proxy_pass:
+          type: str
+          required: true
+        listen:
+          type: str
+          required: true
+        listen_ipv6:
+          type: str
+        proxy_timeout:
+          type: str
+        proxy_connect_timeout:
+          type: str
+    nginx_stream_upstreams:
+      type: list
+      elements: dict
+      description:
+      - Optional native stream declarations; see migration examples.
+      options:
+        name:
+          type: str
+          required: true
+        servers:
+          type: list
+          elements: str
+          required: true
+    nginx_stream_maps:
+      type: list
+      elements: dict
+      description:
+      - Optional native stream declarations; see migration examples.
+      options:
+        source:
+          type: str
+          required: true
+        variable:
+          type: str
+          required: true
+        default:
+          type: str
+        entries:
+          type: list
+          elements: dict
+          required: true
+          options:
+            value:
+              type: str
+              required: true
+            match:
+              type: str
+              required: true
+    nginx_stream_servers:
+      type: list
+      elements: dict
+      description:
+      - Optional native stream declarations; see migration examples.
+      options:
+        listen:
+          type: list
+          elements: str
+          required: true
+        proxy_pass:
+          type: str
+          required: true
+        proxy_timeout:
+          type: str
+          required: false
+        proxy_connect_timeout:
+          type: str
+          required: false
+        ssl_preread:
+          type: bool
+          required: false

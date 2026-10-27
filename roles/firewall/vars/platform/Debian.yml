@@ -1,0 +1,5 @@
+---
+_firewall_platform_backend: ufw
+_firewall_packages:
+- ufw
+_firewall_service: ufw

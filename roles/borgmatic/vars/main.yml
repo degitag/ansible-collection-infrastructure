@@ -11,6 +11,6 @@ borgmatic_timer_unit_name: borgmatic.timer
 borgmatic_uv_binary_path: /usr/local/bin/uv
 borgmatic_uv_cache_dir: /var/cache/uv
 borgmatic_uv_install_dir: /usr/local/bin
-borgmatic_uv_installer_url: https://astral.sh/uv/install.sh
+borgmatic_uv_installer_url: https://astral.sh/uv/{{ borgmatic_uv_version }}/install.sh
 borgmatic_uv_tool_bin_dir: /usr/local/bin
 borgmatic_uv_tool_dir: /opt/borgmatic/uv-tools

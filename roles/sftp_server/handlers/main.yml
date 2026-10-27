@@ -1,6 +1,9 @@
 ---
 - name: Restart sftp ssh service
   ansible.builtin.service:
-    name: "{{ sftp_server_service_name }}"
+    name: '{{ sftp_server_service_name }}'
     state: restarted
   become: true
+  when:
+  - sftp_server_manage_service | bool
+  - sftp_server_service_state != 'stopped'

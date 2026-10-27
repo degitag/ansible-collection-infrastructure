@@ -1,2 +1,4 @@
 ---
-ca_source_path: "ca/*"
+ca_source_path: ca/*
+ca_require_certificates: true
+ca_verify_certificates: true

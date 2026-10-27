@@ -1,32 +1,7 @@
 ---
-- name: Ensure package is installed
-  ansible.builtin.package:
-    name: dnf-automatic
-    state: present
-  become: true
-  tags: dnf-automatic
-
-- name: Configure service
-  ansible.builtin.template:
-    src: dnf-automatic.conf.j2
-    dest: /etc/dnf/automatic.conf
-    owner: root
-    group: root
-    mode: '0644'
-  notify: Restart dnf-automatic
-  become: true
-  tags: dnf-automatic
-
-- name: Enable and start timer
-  ansible.builtin.systemd:
-    name: dnf-automatic.timer
-    enabled: "{{ dnf_automatic_service_enabled }}"
-    state: "{{ dnf_automatic_service_state }}"
-  become: true
-  when: dnf_automatic_manage_service | bool
-  tags: dnf-automatic
-
-- name: Flush handlers
-  ansible.builtin.meta: flush_handlers
-  become: true
-  tags: dnf-automatic
+- name: Prepare facts and platform variables
+  ansible.builtin.import_tasks: preflight.yml
+  tags: always
+- name: Apply dnf_automatic configuration
+  ansible.builtin.import_tasks: configuration.yml
+  tags: dnf_automatic

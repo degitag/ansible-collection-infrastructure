@@ -1,4 +1,0 @@
----
-qemu_guest_agent_packages:
-- qemu-guest-agent
-qemu_guest_agent_service: qemu-guest-agent

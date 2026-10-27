@@ -1,7 +1,0 @@
-{{ ansible_managed | comment }}
-
-{% for route in item.routes6 %}
-ADDRESS{{ loop.index }}={{ route.address }}
-PREFIX{{ loop.index }}={{ route.prefix }}
-GATEWAY{{ loop.index }}={{ route.gateway }}
-{% endfor %}

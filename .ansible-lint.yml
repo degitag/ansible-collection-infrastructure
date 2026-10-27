@@ -1,60 +1,13 @@
 ---
+profile: production
 exclude_paths:
-- molecule/
-- .pre-commit-config.yaml
-- .github/
-- .gitea/
-
-use_default_rules: true
-
-enable_list:
-- no-changed-when
-- syntax-check
-- no-free-form
-- risky-file-permissions
-- ignore-errors
-- partial-become
-- load-failure
-- parser-error
-
-warn_list:
-- experimental
-- meta-no-info
-
+- .ansible/
+- .venv/
+- .git/
+- .host-collection/
+supported_ansible_also:
+- 2.20.
+- 2.21.
+# Shared K3s inputs and OS-derived internal variables intentionally cross role prefixes.
 skip_list:
-- yaml
-- fqcn
-- var-naming
-- key-order
-- name[casing]
-- name[missing]
-- name[template]
-- jinja[spacing]
-- role-name
-- command-instead-of-module
-- command-instead-of-shell
-- no-relative-paths
-- var-spacing
-- no-tabs
-- playbook-extension
-- risky-octal
-- unnamed-task
-- no-loop-var-prefix
-- no-jinja-nesting
-- deprecated-command-syntax
-- deprecated-bare-vars
-- deprecated-local-action
-- deprecated-module
-- no-jinja-when
-- git-latest
-- hg-latest
-- package-latest
-- empty-string-compare
-- inline-env-var
-- literal-compare
-- no-handler
-- meta-incorrect
-- meta-no-tags
-- meta-video-links
-
-verbosity: 1
+- var-naming[no-role-prefix]

@@ -1,0 +1,26 @@
+---
+- name: Install multipath tools
+  ansible.builtin.package:
+    name: '{{ multipath_packages }}'
+    state: present
+    policy_rc_d: "{{ 101 if ansible_facts.os_family == 'Debian' and not (multipath_manage_service | bool and multipath_service_state == 'started') else omit }}"
+  become: true
+  tags: multipath
+
+- name: Configure multipath
+  ansible.builtin.template:
+    src: multipath.conf.j2
+    dest: '{{ multipath_config_file }}'
+    mode: '0644'
+  notify: Restart multipath
+  become: true
+  tags: multipath
+
+- name: Enable and start multipathd service
+  ansible.builtin.service:
+    name: '{{ multipath_service }}'
+    state: '{{ multipath_service_state }}'
+    enabled: '{{ multipath_service_enabled }}'
+  become: true
+  when: multipath_manage_service | bool
+  tags: multipath

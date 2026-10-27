@@ -1,0 +1,9 @@
+{{ ansible_managed | comment }}
+[Unit]
+Description=Check whether a maintenance reboot is required
+[Timer]
+OnCalendar=*-*-* {{ '%02d' | format(conditional_reboot_time.hour) }}:{{ '%02d' | format(conditional_reboot_time.minute) }}:00
+AccuracySec=1min
+Persistent=false
+[Install]
+WantedBy=timers.target

@@ -127,3 +127,8 @@ argument_specs:
         required: false
         type: list
         elements: dict
+      fail2ban_manage_epel:
+        description:
+        - Controls `fail2ban_manage_epel` for the `fail2ban` role.
+        required: false
+        type: bool

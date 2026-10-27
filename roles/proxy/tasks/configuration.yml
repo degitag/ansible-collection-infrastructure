@@ -1,0 +1,52 @@
+---
+- name: Normalize proxy URLs before changing configuration
+  ansible.builtin.set_fact:
+    proxy_environment: '{{ proxy_env | degitag.infrastructure.proxy_environment }}'
+  no_log: true
+- name: Configure proxy in /etc/environment
+  ansible.builtin.template:
+    src: environment.j2
+    dest: /etc/environment
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  tags: proxy
+  no_log: true
+- name: Configure apt proxy
+  ansible.builtin.template:
+    src: apt_proxy.j2
+    dest: /etc/apt/apt.conf.d/90curtin-aptproxy
+    owner: root
+    group: root
+    mode: '0644'
+  when: ansible_facts.os_family == "Debian"
+  become: true
+  tags: proxy
+  no_log: true
+- name: Copy template curl and wget rc files
+  ansible.builtin.template:
+    src: '{{ item }}.j2'
+    dest: /etc/{{ item }}
+    owner: root
+    group: root
+    mode: '0644'
+  with_items:
+  - curlrc
+  - wgetrc
+  become: true
+  tags: proxy
+  no_log: true
+- name: Manage the system pip proxy without replacing other pip settings
+  community.general.ini_file:
+    path: '{{ _proxy_pip_config }}'
+    section: global
+    option: proxy
+    value: '{{ proxy_environment.https_proxy or proxy_environment.http_proxy or proxy_environment.all_proxy }}'
+    state: '{{ ''present'' if (proxy_environment.https_proxy or proxy_environment.http_proxy or proxy_environment.all_proxy) else ''absent'' }}'
+    mode: '0644'
+    owner: root
+    group: root
+  when: proxy_manage_pip | bool
+  no_log: true
+  become: true

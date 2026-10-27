@@ -1,6 +1,6 @@
 ---
 unbound_use_blocklist: false
-unbound_blocklist_url: "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
+unbound_blocklist_url: https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts
 unbound_manage_service: true
 unbound_service_enabled: true
 unbound_service_state: started
@@ -24,7 +24,7 @@ unbound_auth_zones: []
 unbound_config:
   server:
     verbosity: 1
-    num-threads: "{{ ansible_processor_vcpus | default(ansible_processor_count | default(1)) }}"
+    num-threads: "{{ ansible_facts.processor_vcpus | default(ansible_facts.processor_count | default(1)) }}"
     root-hints: "{{ unbound_root_hints_path }}"
     tls-cert-bundle: "{{ unbound_tls_cert_bundle }}"
     log-queries: true
@@ -34,10 +34,10 @@ unbound_config:
     hide-version: true
     do-daemonize: true
     interface:
-    - "0.0.0.0"
-    - "::0"
+    - 0.0.0.0
+    - ::0
     access-control:
-    - "127.0.0.0/8 allow"
-    - "::1/128 allow"
+    - 127.0.0.0/8 allow
+    - ::1/128 allow
   remote-control:
     control-enable: false

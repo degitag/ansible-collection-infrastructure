@@ -1,0 +1,313 @@
+{
+  "verified_on": "2026-10-18",
+  "collection": "degit.infrastructure",
+  "version": "2.0.0",
+  "roles": 45,
+  "operation": "Rename host collection identity and references; preserve application configuration and unrelated edits",
+  "unit_tests_passed": 42,
+  "static_checks": [
+    "generator --check",
+    "YAML lint",
+    "Ansible lint production",
+    "syntax core 2.20.10 and 2.21.5",
+    "build and install without old local collection cache",
+    "artifact identity/dependencies",
+    "ansible-test sanity compile/import"
+  ],
+  "artifact_sha256": "f9eefd9bfdf5db2c031278b106a3138ede886975ac40782ff78e9d07b9c2234f",
+  "k3s_to_infrastructure_network_delegation": {
+    "controller_only": true,
+    "simulated_platforms": 5,
+    "changed": 0
+  },
+  "namespace_only_role_plugin_files_verified": 121,
+  "protected_user_template_sha256": "3127eea326483a3ff3923257a8dd4113313d9b64e3487a188bd4fd3b3d44982d",
+  "historical_validation": "results.json retains original identity and hashes; no relabelling of prior VM proofs",
+  "lab_cleanup": {
+    "owned_vm_3295_removed": true,
+    "iso_and_cloud_image_downloads_removed": true,
+    "disposable_guest_host_key_removed": true
+  },
+  "container_cases": [
+    {
+      "name": "smoke-debian-13",
+      "image": "debian:13",
+      "playbook": "tests/integration/smoke.yml",
+      "returncode": 0,
+      "runs": [
+        {
+          "ok": 86,
+          "changed": 21,
+          "unreachable": 0,
+          "failed": 0
+        },
+        {
+          "ok": 86,
+          "changed": 0,
+          "unreachable": 0,
+          "failed": 0
+        }
+      ]
+    },
+    {
+      "name": "smoke-ubuntu-22.04",
+      "image": "ubuntu:22.04",
+      "playbook": "tests/integration/smoke.yml",
+      "returncode": 0,
+      "runs": [
+        {
+          "ok": 94,
+          "changed": 22,
+          "unreachable": 0,
+          "failed": 0
+        },
+        {
+          "ok": 94,
+          "changed": 0,
+          "unreachable": 0,
+          "failed": 0
+        }
+      ]
+    },
+    {
+      "name": "smoke-ubuntu-24.04",
+      "image": "ubuntu:24.04",
+      "playbook": "tests/integration/smoke.yml",
+      "returncode": 0,
+      "runs": [
+        {
+          "ok": 94,
+          "changed": 22,
+          "unreachable": 0,
+          "failed": 0
+        },
+        {
+          "ok": 94,
+          "changed": 0,
+          "unreachable": 0,
+          "failed": 0
+        }
+      ]
+    },
+    {
+      "name": "smoke-ubuntu-26.04",
+      "image": "ubuntu:26.04",
+      "playbook": "tests/integration/smoke.yml",
+      "returncode": 0,
+      "runs": [
+        {
+          "ok": 94,
+          "changed": 21,
+          "unreachable": 0,
+          "failed": 0
+        },
+        {
+          "ok": 94,
+          "changed": 0,
+          "unreachable": 0,
+          "failed": 0
+        }
+      ]
+    },
+    {
+      "name": "smoke-rockylinux-9",
+      "image": "rockylinux:9",
+      "playbook": "tests/integration/smoke.yml",
+      "returncode": 0,
+      "runs": [
+        {
+          "ok": 82,
+          "changed": 18,
+          "unreachable": 0,
+          "failed": 0
+        },
+        {
+          "ok": 82,
+          "changed": 0,
+          "unreachable": 0,
+          "failed": 0
+        }
+      ]
+    },
+    {
+      "name": "dante-ubuntu-22.04",
+      "image": "ubuntu:22.04",
+      "playbook": "roles/dante/tests/functional.yml",
+      "returncode": 0,
+      "runs": [
+        {
+          "ok": 19,
+          "changed": 5,
+          "unreachable": 0,
+          "failed": 0
+        },
+        {
+          "ok": 19,
+          "changed": 0,
+          "unreachable": 0,
+          "failed": 0
+        }
+      ]
+    },
+    {
+      "name": "dante-ubuntu-24.04",
+      "image": "ubuntu:24.04",
+      "playbook": "roles/dante/tests/functional.yml",
+      "returncode": 0,
+      "runs": [
+        {
+          "ok": 19,
+          "changed": 5,
+          "unreachable": 0,
+          "failed": 0
+        },
+        {
+          "ok": 19,
+          "changed": 0,
+          "unreachable": 0,
+          "failed": 0
+        }
+      ]
+    },
+    {
+      "name": "dante-ubuntu-26.04",
+      "image": "ubuntu:26.04",
+      "playbook": "roles/dante/tests/functional.yml",
+      "returncode": 0,
+      "runs": [
+        {
+          "ok": 19,
+          "changed": 5,
+          "unreachable": 0,
+          "failed": 0
+        },
+        {
+          "ok": 19,
+          "changed": 0,
+          "unreachable": 0,
+          "failed": 0
+        }
+      ]
+    },
+    {
+      "name": "dante-rocky-9",
+      "image": "rockylinux:9",
+      "playbook": "roles/dante/tests/functional.yml",
+      "returncode": 0,
+      "runs": [
+        {
+          "ok": 26,
+          "changed": 7,
+          "unreachable": 0,
+          "failed": 0
+        },
+        {
+          "ok": 26,
+          "changed": 0,
+          "unreachable": 0,
+          "failed": 0
+        }
+      ]
+    },
+    {
+      "name": "wpad-ubuntu-22.04",
+      "image": "ubuntu:22.04",
+      "playbook": "roles/wpad/tests/functional.yml",
+      "returncode": 0,
+      "runs": [
+        {
+          "ok": 22,
+          "changed": 4,
+          "unreachable": 0,
+          "failed": 0
+        },
+        {
+          "ok": 21,
+          "changed": 0,
+          "unreachable": 0,
+          "failed": 0
+        }
+      ]
+    },
+    {
+      "name": "wpad-ubuntu-24.04",
+      "image": "ubuntu:24.04",
+      "playbook": "roles/wpad/tests/functional.yml",
+      "returncode": 0,
+      "runs": [
+        {
+          "ok": 22,
+          "changed": 4,
+          "unreachable": 0,
+          "failed": 0
+        },
+        {
+          "ok": 21,
+          "changed": 0,
+          "unreachable": 0,
+          "failed": 0
+        }
+      ]
+    },
+    {
+      "name": "wpad-ubuntu-26.04",
+      "image": "ubuntu:26.04",
+      "playbook": "roles/wpad/tests/functional.yml",
+      "returncode": 0,
+      "runs": [
+        {
+          "ok": 22,
+          "changed": 4,
+          "unreachable": 0,
+          "failed": 0
+        },
+        {
+          "ok": 21,
+          "changed": 0,
+          "unreachable": 0,
+          "failed": 0
+        }
+      ]
+    },
+    {
+      "name": "wpad-debian-13",
+      "image": "debian:13",
+      "playbook": "roles/wpad/tests/functional.yml",
+      "returncode": 0,
+      "runs": [
+        {
+          "ok": 21,
+          "changed": 4,
+          "unreachable": 0,
+          "failed": 0
+        },
+        {
+          "ok": 20,
+          "changed": 0,
+          "unreachable": 0,
+          "failed": 0
+        }
+      ]
+    },
+    {
+      "name": "wpad-rocky-9",
+      "image": "rockylinux:9",
+      "playbook": "roles/wpad/tests/functional.yml",
+      "returncode": 0,
+      "runs": [
+        {
+          "ok": 22,
+          "changed": 4,
+          "unreachable": 0,
+          "failed": 0
+        },
+        {
+          "ok": 21,
+          "changed": 0,
+          "unreachable": 0,
+          "failed": 0
+        }
+      ]
+    }
+  ]
+}

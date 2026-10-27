@@ -1,0 +1,123 @@
+---
+- name: Validate supported platform
+  ansible.builtin.assert:
+    that:
+    - ansible_facts.os_family == "RedHat"
+    fail_msg: The dnf_repos role supports RedHat-family systems only.
+  tags: dnf_repos
+
+- name: Configure explicitly requested EPEL repository
+  ansible.builtin.include_tasks: epel.yml
+  when: dnf_repos_manage_epel | bool
+- name: Ensure repository directory exists
+  ansible.builtin.file:
+    path: '{{ dnf_repos_directory }}'
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+  tags: dnf_repos
+
+- name: Ensure GPG key directory exists
+  ansible.builtin.file:
+    path: '{{ dnf_repos_key_directory }}'
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  when: dnf_repos_manage_keys | bool
+  become: true
+  tags: dnf_repos
+
+- name: Discover existing repository files
+  ansible.builtin.find:
+    paths: '{{ dnf_repos_directory }}'
+    patterns: '*.repo'
+    file_type: file
+  register: _dnf_repos_existing_files
+  when: dnf_repos_remove_original | bool
+  become: true
+  tags: dnf_repos
+
+- name: Download managed repository keys
+  ansible.builtin.get_url:
+    url: '{{ item.gpgkey_url }}'
+    dest: "{{ item.key_path | default(dnf_repos_key_directory ~ '/' ~ item.name ~ '.asc') }}"
+    owner: root
+    group: root
+    mode: '0644'
+    timeout: 30
+  loop: '{{ dnf_repos_list }}'
+  loop_control:
+    label: '{{ item.name }}'
+  when:
+  - dnf_repos_manage_keys | bool
+  - item.state | default('present') == 'present'
+  - item.gpgkey_url is defined
+  become: true
+  tags: dnf_repos
+
+- name: Remove unmanaged repository files
+  ansible.builtin.file:
+    path: '{{ item.path }}'
+    state: absent
+  loop: '{{ _dnf_repos_existing_files.files }}'
+  loop_control:
+    label: '{{ item.path }}'
+  when:
+  - dnf_repos_remove_original | bool
+  - item.path | basename not in ( dnf_repos_list | selectattr('state', 'undefined') | map(attribute='file') | reject('equalto', None) | map('regex_replace', '$', '.repo') | list + dnf_repos_list | selectattr('state', 'defined') | selectattr('state', 'equalto', 'present') | map(attribute='file') | reject('equalto', None) | map('regex_replace', '$', '.repo') | list + dnf_repos_list | selectattr('state', 'undefined') | map(attribute='name') | map('regex_replace', '$', '.repo') | list + dnf_repos_list | selectattr('state', 'defined') | selectattr('state', 'equalto', 'present') | map(attribute='name') | map('regex_replace', '$', '.repo') | list )
+  become: true
+  tags: dnf_repos
+
+- name: Configure YUM and DNF repositories
+  ansible.builtin.yum_repository:
+    name: '{{ item.name }}'
+    description: '{{ item.description | default(item.name) }}'
+    file: '{{ item.file | default(item.name) }}'
+    state: "{{ item.state | default('present') }}"
+    baseurl: '{{ item.baseurl | default(omit) }}'
+    metalink: '{{ item.metalink | default(omit) }}'
+    mirrorlist: '{{ item.mirrorlist | default(omit) }}'
+    enabled: '{{ item.enabled | default(true) }}'
+    gpgcheck: '{{ item.gpgcheck | default(true) }}'
+    repo_gpgcheck: '{{ item.repo_gpgcheck | default(omit) }}'
+    gpgkey: >-
+      {{
+        item.gpgkey
+        | default(
+            'file://' ~ (item.key_path | default(dnf_repos_key_directory ~ '/' ~ item.name ~ '.asc'))
+            if (dnf_repos_manage_keys | bool and item.gpgkey_url is defined)
+            else omit
+          )
+      }}
+    sslverify: '{{ item.sslverify | default(omit) }}'
+    username: '{{ item.username | default(omit) }}'
+    password: '{{ item.password | default(omit) }}'
+    priority: '{{ item.priority | default(omit) }}'
+    cost: '{{ item.cost | default(omit) }}'
+    module_hotfixes: '{{ item.module_hotfixes | default(omit) }}'
+    includepkgs: '{{ item.includepkgs | default(omit) }}'
+    exclude: '{{ item.exclude | default(omit) }}'
+    mode: "{{ '0600' if item.password is defined else '0644' }}"
+  loop: '{{ dnf_repos_list }}'
+  loop_control:
+    label: '{{ item.name }}'
+  become: true
+  tags: dnf_repos
+
+  no_log: '{{ item.password is defined }}'
+- name: Remove managed repository keys for absent repositories
+  ansible.builtin.file:
+    path: "{{ item.key_path | default(dnf_repos_key_directory ~ '/' ~ item.name ~ '.asc') }}"
+    state: absent
+  loop: '{{ dnf_repos_list }}'
+  loop_control:
+    label: '{{ item.name }}'
+  when:
+  - dnf_repos_manage_keys | bool
+  - item.state | default('present') == 'absent'
+  - item.gpgkey_url is defined or item.key_path is defined
+  become: true
+  tags: dnf_repos

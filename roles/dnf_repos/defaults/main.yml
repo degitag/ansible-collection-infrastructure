@@ -4,3 +4,4 @@ dnf_repos_key_directory: /etc/pki/rpm-gpg
 dnf_repos_manage_keys: true
 dnf_repos_remove_original: false
 dnf_repos_list: []
+dnf_repos_manage_epel: false

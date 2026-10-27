@@ -20,9 +20,9 @@
 {%   endfor %}
 {% endif %}
 {% if sshd_bind_ips is sameas true %}
-ListenAddress {{ ansible_default_ipv4.address }}
-{%   if ansible_default_ipv6.address is defined %}
-ListenAddress {{ ansible_default_ipv6.address | default('') }}
+ListenAddress {{ ansible_facts.default_ipv4.address }}
+{%   if ansible_facts.default_ipv6.address is defined %}
+ListenAddress {{ ansible_facts.default_ipv6.address | default('') }}
 {%   endif %}
 {% else %}
 {% if sshd_bind_ips is sameas false or sshd_bind_ips is not defined %}
@@ -30,6 +30,8 @@ ListenAddress 0.0.0.0
 ListenAddress ::
 {% endif %}
 {% endif %}
+Include {{ _sshd_server_include_glob }}
+
 {% for match_block in sshd_server_match_blocks %}
 
 Match {{ match_block.condition }}

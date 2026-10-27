@@ -22,7 +22,7 @@ argument_specs:
         type: bool
       haproxy_service_enabled:
         description:
-        - Controls `haproxy_service_enabled` for the `haproxy` role.
+        - Enable the service when listeners or frontends are configured.
         required: false
         type: bool
       haproxy_service_state:

@@ -1,4 +1,0 @@
----
-nmcli_packages:
-- network-manager
-nmcli_service_name: NetworkManager

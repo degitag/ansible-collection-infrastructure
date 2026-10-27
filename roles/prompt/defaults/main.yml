@@ -1,0 +1,9 @@
+---
+prompt_enabled: true
+prompt_manage_ssh_agent: false
+prompt_manage_root_dotfiles: false
+prompt_install_bcrypt: false
+prompt_install_yq: false
+prompt_yq_version: 4.44.3
+prompt_yq_checksum: ''
+prompt_git_branch: true

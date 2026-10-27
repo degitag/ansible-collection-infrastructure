@@ -29,7 +29,7 @@ port {{ account.port }}
 {% if account.from is defined %}
 from {{ account.from }}
 {% else %}
-from {{ ansible_hostname ~ '@' ~ ansible_domain if ansible_domain is defined and ansible_domain != '' else ansible_hostname }}
+from {{ ansible_facts.hostname ~ '@' ~ ansible_facts.domain if ansible_facts.domain is defined and ansible_facts.domain != '' else ansible_facts.hostname }}
 {% endif %}
 auth {{ account.auth | default('on' if (account.user is defined and account.user | string | length > 0) else msmtp_auth) }}
 tls {{ account.tls | default(msmtp_tls) }}

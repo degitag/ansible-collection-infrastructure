@@ -30,3 +30,8 @@ argument_specs:
         - Controls `dnf_repos_list` for the `dnf_repos` role.
         required: false
         type: list
+      dnf_repos_manage_epel:
+        description:
+        - Controls `dnf_repos_manage_epel` for the `dnf_repos` role.
+        required: false
+        type: bool

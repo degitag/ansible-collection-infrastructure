@@ -1,0 +1,120 @@
+---
+argument_specs:
+  main:
+    short_description: Entry point for the firewall role.
+    description:
+    - Validate variables for the `firewall` role.
+    options:
+      firewall_backend:
+        description:
+        - Select the native firewall backend.
+        required: false
+        type: str
+        choices:
+        - auto
+        - ufw
+        - firewalld
+      firewall_manage_service:
+        description:
+        - Controls `firewall_manage_service` for the `firewall` role.
+        required: false
+        type: bool
+      firewall_service_enabled:
+        description:
+        - Controls `firewall_service_enabled` for the `firewall` role.
+        required: false
+        type: bool
+      firewall_service_state:
+        description:
+        - Desired daemon state.
+        required: false
+        type: str
+        choices:
+        - started
+        - stopped
+      firewall_manage_activation:
+        description:
+        - Controls `firewall_manage_activation` for the `firewall` role.
+        required: false
+        type: bool
+      firewall_enabled:
+        description:
+        - Controls `firewall_enabled` for the `firewall` role.
+        required: false
+        type: bool
+      firewall_default_incoming_policy:
+        description:
+        - Controls `firewall_default_incoming_policy` for the `firewall` role.
+        required: false
+        type: str
+      firewall_zone:
+        description:
+        - Controls `firewall_zone` for the `firewall` role.
+        required: false
+        type: str
+      firewall_rules:
+        description:
+        - Additive inbound port rules; explicitly remove a rule with state absent.
+        required: false
+        type: list
+        elements: dict
+        options:
+          port:
+            type: str
+            description:
+            - Port number or ascending range.
+            required: true
+          protocol:
+            type: str
+            description:
+            - Layer-4 protocol.
+            choices:
+            - tcp
+            - udp
+          action:
+            type: str
+            description:
+            - Traffic disposition.
+            choices:
+            - allow
+            - deny
+            - reject
+          state:
+            type: str
+            description:
+            - Presence of this exact owned rule.
+            choices:
+            - present
+            - absent
+          source:
+            type: str
+            description:
+            - Optional source address or CIDR; defaults to any.
+          destination:
+            type: str
+            description:
+            - Optional destination address or CIDR; defaults to any.
+          interface:
+            type: str
+            description:
+            - Inbound interface match, UFW only.
+          zone:
+            type: str
+            description:
+            - firewalld zone; defaults to firewall_zone.
+          comment:
+            type: str
+            description:
+            - Operator-facing rule description for UFW.
+          direction:
+            type: str
+            description:
+            - Portable rules are inbound only.
+            choices:
+            - in
+      firewall_trusted_sources:
+        description:
+        - 'Explicitly trusted CIDRs. Allows all input and forwarding from these networks; intended only for private cluster pod/service networks. Additive: removing a CIDR from this list does not revoke an existing trust assignment.'
+        required: false
+        type: list
+        elements: str

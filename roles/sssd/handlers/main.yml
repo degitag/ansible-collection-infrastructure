@@ -6,9 +6,15 @@
   become: true
   tags: sssd
 
+  when:
+  - sssd_manage_service | bool
+  - sssd_service_state != 'stopped'
 - name: Restart sshd
   ansible.builtin.systemd:
-    name: "{{ sssd_sshd_service_name }}"
+    name: '{{ sssd_sshd_service_name }}'
     state: restarted
   become: true
   tags: sssd
+  when:
+  - sssd_manage_service | bool
+  - sssd_service_state != 'stopped'

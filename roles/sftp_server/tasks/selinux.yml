@@ -1,0 +1,35 @@
+---
+- name: Install SFTP SELinux policy tooling
+  ansible.builtin.package:
+    name: '{{ _sftp_selinux_packages }}'
+    state: present
+    policy_rc_d: "{{ 101 if ansible_facts.os_family == 'Debian' and not (sftp_server_manage_service | bool and sftp_server_service_state == 'started') else omit }}"
+  become: true
+- name: Declare SELinux contexts for chroots and isolated SSH keys
+  community.general.sefcontext:
+    target: '{{ item }}(/.*)?'
+    setype: '{{ _sftp_selinux_file_type }}'
+    state: present
+  loop:
+  - '{{ sftp_server_base_path }}'
+  - '{{ sftp_server_authorized_keys_dir }}'
+  become: true
+- name: Allow writing to explicitly managed SFTP chroot homes
+  ansible.posix.seboolean:
+    name: ssh_chroot_rw_homedirs
+    state: true
+    persistent: true
+  when: sftp_server_users | length > 0
+  become: true
+- name: Restore declared SFTP and key contexts
+  ansible.builtin.command:
+    argv:
+    - restorecon
+    - -RFv
+    - '{{ item }}'
+  loop:
+  - '{{ sftp_server_base_path }}'
+  - '{{ sftp_server_authorized_keys_dir }}'
+  register: _sftp_restorecon
+  changed_when: _sftp_restorecon.stdout | length > 0
+  become: true

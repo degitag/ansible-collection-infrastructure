@@ -1,6 +1,9 @@
 ---
 - name: Restart dante
   ansible.builtin.service:
-    name: "{{ dante_service_name }}"
+    name: '{{ dante_service_name }}'
     state: restarted
   become: true
+  when:
+  - dante_manage_service | bool
+  - dante_service_state != 'stopped'

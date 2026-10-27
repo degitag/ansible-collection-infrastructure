@@ -1,0 +1,17 @@
+---
+docker_conflicting_packages:
+- docker
+- docker-client
+- docker-client-latest
+- docker-common
+- docker-latest
+- docker-latest-logrotate
+- docker-logrotate
+- docker-engine
+- podman
+- runc
+docker_repository_gpg_key_url: https://download.docker.com/linux/{{ 'rhel' if ansible_facts.distribution == 'RedHat' else 'centos' }}/gpg
+docker_repository_prerequisite_packages:
+- ca-certificates
+docker_yum_repository_baseurl: https://download.docker.com/linux/{{ 'rhel' if ansible_facts.distribution == 'RedHat' else 'centos' }}/$releasever/$basearch/stable
+_docker_proxy_dropin: /etc/systemd/system/docker.service.d/http-proxy.conf

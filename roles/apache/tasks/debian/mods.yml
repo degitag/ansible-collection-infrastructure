@@ -1,5 +1,5 @@
 ---
-- name: "Loading modules"
+- name: Loading modules
   community.general.apache2_module:
     state: "{{ item.state }}"
     name: "{{ item.id }}"
@@ -8,10 +8,10 @@
   loop: "{{ _apache_mods }}"
   notify: Reload apache
 
-- name: "Loading proxy_fcgi module"
+- name: Loading proxy_fcgi module
   community.general.apache2_module:
-    state: "present"
-    name: "proxy_fcgi"
+    state: present
+    name: proxy_fcgi
   loop: "{{ apache_vhosts }}"
   loop_control:
     label: "{{ item.name }}"
@@ -20,9 +20,9 @@
   - item.php_fpm
   notify: Reload apache
 
-- name: "Loading remoteip module"
+- name: Loading remoteip module
   community.general.apache2_module:
-    state: "present"
-    name: "remoteip"
+    state: present
+    name: remoteip
   when: apache_remoteip
   notify: Reload apache

@@ -1,41 +1,7 @@
 ---
-- name: Ensure package is installed
-  ansible.builtin.package:
-    name: auditd
-    state: present
-  become: true
+- name: Prepare facts and platform variables
+  ansible.builtin.import_tasks: preflight.yml
+  tags: always
+- name: Apply auditd configuration
+  ansible.builtin.import_tasks: configuration.yml
   tags: auditd
-
-- name: Deploy audit.rules for user session logging
-  ansible.builtin.template:
-    src: audit.rules.j2
-    dest: /etc/audit/rules.d/audit.rules
-    owner: root
-    group: root
-    mode: '0640'
-  notify: Restart auditd
-  become: true
-  tags: auditd
-
-- name: Apply extra rules if defined
-  ansible.builtin.lineinfile:
-    path: /etc/audit/rules.d/audit.rules
-    line: "{{ item }}"
-    insertafter: EOF
-  loop: "{{ auditd_extra_rules }}"
-  when: auditd_extra_rules | length > 0
-  notify: Restart auditd
-  become: true
-  tags: auditd
-
-- name: Ensure service is started and enabled
-  ansible.builtin.service:
-    name: auditd
-    state: "{{ auditd_service_state }}"
-    enabled: "{{ auditd_service_enabled }}"
-  become: true
-  when: auditd_manage_service | bool
-  tags: auditd
-
-- name: Flush handlers
-  ansible.builtin.meta: flush_handlers

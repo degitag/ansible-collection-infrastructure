@@ -1,0 +1,69 @@
+---
+- name: Validate explicit repository management and encryption inputs
+  ansible.builtin.assert:
+    that:
+    - not borgbackup_manage_cron | bool or borgbackup_manage_repository | bool
+    - not borgbackup_manage_repository | bool or borgbackup_repository.startswith('/')
+    - not borgbackup_manage_repository | bool or borgbackup_encryption_mode == 'none' or borgbackup_encryption_passphrase | length > 0
+    fail_msg: Repository initialization and scheduling are opt-in; encrypted repositories require a passphrase.
+- name: Configure the documented EPEL package source on EL9
+  ansible.builtin.include_role:
+    name: degitag.infrastructure.dnf_repos
+    tasks_from: epel
+  when:
+  - ansible_facts.os_family == 'RedHat'
+  - borgbackup_manage_epel | bool
+- name: Install BorgBackup
+  ansible.builtin.package:
+    name: '{{ _borgbackup_packages }}'
+    state: present
+  become: true
+  tags: borgbackup
+
+- name: Create Borg repository directory
+  ansible.builtin.file:
+    path: '{{ borgbackup_repository }}'
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+  become: true
+  tags: borgbackup
+
+  when: borgbackup_manage_repository | bool
+- name: Configure Borg repository
+  ansible.builtin.command:
+    argv:
+    - borg
+    - init
+    - --encryption={{ borgbackup_encryption_mode }}
+    - '{{ borgbackup_repository }}'
+    creates: '{{ borgbackup_repository }}/config'
+  environment:
+    BORG_PASSPHRASE: '{{ borgbackup_encryption_passphrase }}'
+  become: true
+  tags: borgbackup
+
+  when: borgbackup_manage_repository | bool
+  no_log: true
+- name: Schedule backup job
+  ansible.builtin.template:
+    src: borgbackup.sh.j2
+    dest: '{{ borgbackup_script_path }}'
+    mode: '0700'
+    owner: root
+    group: root
+  become: true
+  tags: borgbackup
+
+  when: borgbackup_manage_repository | bool
+  no_log: true
+- name: Create cron job for backups
+  ansible.builtin.cron:
+    name: BorgBackup
+    minute: '{{ borgbackup_cron_minute }}'
+    hour: '{{ borgbackup_cron_hour }}'
+    job: '{{ borgbackup_script_path }}'
+    state: "{{ 'present' if borgbackup_manage_cron | bool else 'absent' }}"
+  become: true
+  tags: borgbackup

@@ -7,12 +7,12 @@ squid_manage_firewall: false
 squid_firewall_zone: public
 squid_manage_selinux: true
 squid_port: 3128
-squid_config_dir: "{{ squid_os_config_dir }}"
-squid_conf_d_dir: "{{ squid_os_conf_d_dir }}"
+squid_config_dir: "{{ squid_os_config_dir | default('/etc/squid') }}"
+squid_conf_d_dir: "{{ squid_os_conf_d_dir | default('/etc/squid/conf.d') }}"
 squid_user: squid
 squid_group: squid
-squid_visible_hostname: "{{ ansible_fqdn | default(ansible_hostname) }}"
-squid_cache_mgr: "hostmaster@{{ ansible_domain | default('localdomain') }}"
+squid_visible_hostname: '{{ ansible_facts.fqdn | default(inventory_hostname) }}'
+squid_cache_mgr: hostmaster@{{ ansible_facts.domain | default('localdomain') }}
 squid_ssl_ports:
 - 443
 squid_safe_ports:

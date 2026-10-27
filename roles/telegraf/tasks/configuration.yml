@@ -1,0 +1,241 @@
+---
+- name: Validate supported platform
+  ansible.builtin.assert:
+    that:
+    - ansible_facts.os_family in ["Debian", "RedHat"]
+    fail_msg: The telegraf role supports Debian and RedHat families only.
+  tags: telegraf
+
+- name: Install SELinux tooling for telegraf
+  ansible.builtin.package:
+    name: '{{ telegraf_selinux_packages }}'
+    state: present
+    policy_rc_d: "{{ 101 if ansible_facts.os_family == 'Debian' and not (telegraf_manage_service | bool and telegraf_service_state == 'started') else omit }}"
+  when:
+  - ansible_facts.os_family == "RedHat"
+  - telegraf_manage_selinux | bool
+  - ansible_facts.selinux is defined
+  - ansible_facts.selinux.status == "enabled"
+  become: true
+  tags: telegraf
+
+- name: Ensure apt keyring directory exists
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  when:
+  - telegraf_manage_repository | bool
+  - ansible_facts.os_family == 'Debian'
+  become: true
+  tags: telegraf
+
+- name: Install GPG key
+  ansible.builtin.get_url:
+    url: '{{ telegraf_gpg_key_url }}'
+    dest: "{{ telegraf_apt_key_download_path if ansible_facts.os_family == 'Debian' else '/etc/pki/rpm-gpg/RPM-GPG-KEY-influxdata' }}"
+    mode: '0644'
+  when: telegraf_manage_repository | bool
+  become: true
+  tags: telegraf
+
+- name: Dearmor InfluxData archive key for Debian
+  ansible.builtin.command:
+    argv:
+    - gpg
+    - --dearmor
+    - --yes
+    - -o
+    - '{{ telegraf_apt_keyring_path }}'
+    - '{{ telegraf_apt_key_download_path }}'
+  when:
+  - telegraf_manage_repository | bool
+  - ansible_facts.os_family == 'Debian'
+  become: true
+  changed_when: true
+  tags: telegraf
+
+- name: Add Telegraf repository (Debian)
+  ansible.builtin.apt_repository:
+    repo: '{{ telegraf_apt_repo }}'
+  when:
+  - telegraf_manage_repository | bool
+  - ansible_facts.os_family == 'Debian'
+  become: true
+  tags: telegraf
+
+- name: Add Telegraf repository (RedHat)
+  ansible.builtin.yum_repository:
+    name: influxdata
+    description: InfluxData Telegraf repository
+    baseurl: '{{ telegraf_yum_repo_baseurl }}'
+    enabled: true
+    gpgcheck: true
+    gpgkey: '{{ telegraf_gpg_key_url }}'
+  when:
+  - telegraf_manage_repository | bool
+  - ansible_facts.os_family == 'RedHat'
+  become: true
+  tags: telegraf
+
+- name: Install Telegraf
+  ansible.builtin.package:
+    name: '{{ telegraf_package_name }}'
+    state: present
+    policy_rc_d: "{{ 101 if ansible_facts.os_family == 'Debian' and not (telegraf_manage_service | bool and telegraf_service_state == 'started') else omit }}"
+  become: true
+  tags: telegraf
+
+- name: Combine telegraf global tags
+  ansible.builtin.set_fact:
+    telegraf_effective_global_tags: >-
+      {{
+        (telegraf_global_tags | default({}))
+        | combine(telegraf_global_tags_group_vars | default({}), recursive=True)
+        | combine(telegraf_global_tags_host_vars | default({}), recursive=True)
+        | combine(telegraf_global_tags_playbook | default({}), recursive=True)
+      }}
+  tags: telegraf
+
+- name: Combine telegraf supplementary groups
+  ansible.builtin.set_fact:
+    telegraf_effective_extra_groups: >-
+      {{
+        (
+          (telegraf_extra_groups | default([]))
+          + (telegraf_extra_groups_group_vars | default([]))
+          + (telegraf_extra_groups_host_vars | default([]))
+          + (telegraf_extra_groups_playbook | default([]))
+        ) | unique
+      }}
+  tags: telegraf
+
+- name: Ensure telegraf user supplementary groups
+  ansible.builtin.user:
+    name: '{{ telegraf_user }}'
+    groups: "{{ telegraf_effective_extra_groups | join(',') }}"
+    append: true
+  when: telegraf_effective_extra_groups | length > 0
+  become: true
+  notify: Restart Telegraf
+  tags: telegraf
+
+- name: Combine legacy telegraf plugin definitions
+  ansible.builtin.set_fact:
+    telegraf_effective_plugins: >-
+      {{
+        (telegraf_plugins | default([]))
+        + (telegraf_plugins_group_vars | default([]))
+        + (telegraf_plugins_host_vars | default([]))
+        + (telegraf_plugins_playbook | default([]))
+      }}
+  tags: telegraf
+
+- name: Combine telegraf snippet files
+  ansible.builtin.set_fact:
+    telegraf_effective_plugin_files: >-
+      {{
+        (telegraf_plugin_files | default([]))
+        + (telegraf_plugin_files_group_vars | default([]))
+        + (telegraf_plugin_files_host_vars | default([]))
+        + (telegraf_plugin_files_playbook | default([]))
+      }}
+  tags: telegraf
+
+- name: Create plugins directory
+  ansible.builtin.file:
+    path: '{{ telegraf_plugins_path }}'
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+  tags: telegraf
+
+- name: Deploy Telegraf main configuration
+  ansible.builtin.template:
+    src: telegraf.conf.j2
+    dest: '{{ telegraf_config_path }}'
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart Telegraf
+  when: telegraf_manage_main_config | bool
+  become: true
+  tags: telegraf
+
+- name: Deploy legacy Telegraf plugin configurations
+  ansible.builtin.template:
+    src: plugins.conf.j2
+    dest: "{{ telegraf_plugins_path }}/{{ item.filename | default(item.type ~ '.conf') }}"
+    owner: root
+    group: root
+    mode: '0644'
+  loop: '{{ telegraf_effective_plugins }}'
+  loop_control:
+    label: "{{ item.filename | default(item.type ~ '.conf') }}"
+  notify: Restart Telegraf
+  when: telegraf_manage_plugin_configs | bool
+  become: true
+  tags: telegraf
+
+- name: Deploy Telegraf snippet files
+  ansible.builtin.template:
+    src: plugins.conf.j2
+    dest: '{{ telegraf_plugins_path }}/{{ item.name }}'
+    owner: root
+    group: root
+    mode: '0644'
+  loop: '{{ telegraf_effective_plugin_files }}'
+  loop_control:
+    label: '{{ item.name }}'
+  notify: Restart Telegraf
+  when: telegraf_manage_plugin_configs | bool
+  become: true
+  tags: telegraf
+
+- name: Start and enable Telegraf
+  ansible.builtin.systemd:
+    daemon_reload: true
+    name: '{{ telegraf_service_name }}'
+    enabled: '{{ telegraf_service_enabled }}'
+    state: '{{ telegraf_service_state }}'
+  when: telegraf_manage_service | bool
+  become: true
+  tags: telegraf
+
+- name: Manage telegraf ports through the firewall role
+  ansible.builtin.include_role:
+    name: degitag.infrastructure.firewall
+    apply:
+      tags: telegraf
+  vars:
+    firewall_manage_activation: false
+    firewall_rules:
+    - port: "{{ _telegraf_firewall_port.split('/')[0] }}"
+      protocol: "{{ _telegraf_firewall_port.split('/')[1] }}"
+      action: allow
+      comment: Telegraf
+      zone: '{{ telegraf_firewall_zone | default("public") }}'
+  loop: '{{ telegraf_firewall_ports }}'
+  loop_control:
+    loop_var: _telegraf_firewall_port
+  when:
+  - telegraf_manage_firewall | bool
+  tags: telegraf
+- name: Allow telegraf ports in SELinux
+  community.general.seport:
+    ports: "{{ item.split('/')[0] }}"
+    proto: "{{ item.split('/')[1] }}"
+    setype: '{{ telegraf_selinux_port_type }}'
+    state: present
+  loop: '{{ telegraf_firewall_ports }}'
+  when:
+  - ansible_facts.os_family == "RedHat"
+  - telegraf_manage_selinux | bool
+  - ansible_facts.selinux is defined
+  - ansible_facts.selinux.status == "enabled"
+  become: true
+  tags: telegraf

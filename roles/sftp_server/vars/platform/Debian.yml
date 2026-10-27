@@ -1,0 +1,11 @@
+---
+sftp_server_package_name: openssh-server
+sftp_server_service_name: ssh
+sftp_server_sshd_binary: /usr/sbin/sshd
+sftp_server_nologin_shell: /usr/sbin/nologin
+sftp_server_sshd_config_dir: /etc/ssh/sshd_config.d
+sftp_server_sshd_match_config_path: /etc/ssh/sshd_config.d/99-sftp-server.conf
+_sftp_server_runtime_directory: /run/sshd
+_sftp_sshd_config_file: /etc/ssh/sshd_config
+_sftp_server_hostkey_marker: /etc/ssh/ssh_host_rsa_key
+_sftp_server_keygen_binary: /usr/bin/ssh-keygen

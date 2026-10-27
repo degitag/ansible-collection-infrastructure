@@ -15,7 +15,7 @@ def render_apt_sources(context: dict) -> str:
         lstrip_blocks=True,
     )
     template = environment.get_template("repo.sources.j2")
-    return template.render(**context)
+    return template.render(**{**context, "ansible_facts": {key.removeprefix("ansible_"): value for key, value in context.items() if key.startswith("ansible_")}})
 
 
 def test_apt_sources_renders_signed_by_from_managed_key() -> None:

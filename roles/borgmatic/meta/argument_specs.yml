@@ -95,3 +95,18 @@ argument_specs:
         - Controls `borgmatic_config` for the `borgmatic` role.
         required: false
         type: dict
+      borgmatic_manage_epel:
+        description:
+        - Controls `borgmatic_manage_epel` for the `borgmatic` role.
+        required: false
+        type: bool
+      borgmatic_uv_version:
+        description:
+        - Controls `borgmatic_uv_version` for the `borgmatic` role.
+        required: false
+        type: str
+      borgmatic_uv_installer_checksum:
+        description:
+        - Controls `borgmatic_uv_installer_checksum` for the `borgmatic` role.
+        required: false
+        type: str

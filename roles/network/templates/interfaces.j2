@@ -1,0 +1,49 @@
+# Managed by degitag.infrastructure.network
+{% for iface in _network_compiled %}
+auto {{ iface.name }}
+iface {{ iface.name }} inet {{ 'dhcp' if iface.dhcp4 | default(false) else ('static' if iface.addresses4 else 'manual') }}
+{% for address in iface.addresses4 %}
+    address {{ address }}
+{% endfor %}
+{% if iface.gateway4 | default('') %}
+    gateway {{ iface.gateway4 }}
+{% endif %}
+{% if iface.dns %}
+    post-up /usr/bin/resolvectl dns {{ iface.name }} {{ iface.dns | join(' ') }}
+    pre-down /usr/bin/resolvectl revert {{ iface.name }}
+{% endif %}
+{% if iface.search | default([]) %}
+    post-up /usr/bin/resolvectl domain {{ iface.name }} {{ iface.search | join(' ') }}
+{% endif %}
+{% if iface.mtu is defined %}
+    mtu {{ iface.mtu }}
+{% endif %}
+{% if iface.type == 'bridge' %}
+    bridge_ports {{ iface.members | join(' ') if iface.members else 'none' }}
+{% elif iface.type == 'bond' %}
+    bond-slaves {{ iface.members | join(' ') }}
+    bond-mode {{ iface.bond_mode | default('active-backup') }}
+{% elif iface.type == 'vlan' %}
+    vlan-raw-device {{ iface.parent }}
+    vlan-id {{ iface.vlan_id }}
+{% endif %}
+{% for route in iface.routes4 %}
+    post-up /usr/sbin/ip route replace {{ route.to }} via {{ route.via }} dev {{ iface.name }}{% if route.metric is defined %} metric {{ route.metric }}{% endif %}
+
+    pre-down /usr/sbin/ip route del {{ route.to }} via {{ route.via }} dev {{ iface.name }} || true
+{% endfor %}
+{% if iface.addresses6 or iface.dhcp6 | default(false) %}
+iface {{ iface.name }} inet6 {{ 'dhcp' if iface.dhcp6 | default(false) else 'static' }}
+{% for address in iface.addresses6 %}
+    address {{ address }}
+{% endfor %}
+{% if iface.gateway6 | default('') %}
+    gateway {{ iface.gateway6 }}
+{% endif %}
+{% for route in iface.routes6 %}
+    post-up /usr/sbin/ip -6 route replace {{ route.to }} via {{ route.via }} dev {{ iface.name }}
+    pre-down /usr/sbin/ip -6 route del {{ route.to }} via {{ route.via }} dev {{ iface.name }} || true
+{% endfor %}
+{% endif %}
+
+{% endfor %}

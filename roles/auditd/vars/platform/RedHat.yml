@@ -1,0 +1,6 @@
+---
+_auditd_packages:
+- audit
+_auditd_service_name: auditd
+_auditd_service_binary: /sbin/service
+_auditd_auditctl_binary: /sbin/auditctl

@@ -1,0 +1,17 @@
+---
+- name: Install package
+  ansible.builtin.package:
+    name: '{{ vmware_tools_package_name }}'
+    state: '{{ vmware_tools_package_state }}'
+    policy_rc_d: "{{ 101 if ansible_facts.os_family == 'Debian' and not (vmware_tools_manage_service | bool and vmware_tools_service_state == 'started') else omit }}"
+  become: true
+  tags: vmware_tools
+
+- name: Start and enable service
+  ansible.builtin.service:
+    name: '{{ vmware_tools_service_name }}'
+    state: '{{ vmware_tools_service_state }}'
+    enabled: '{{ vmware_tools_service_enabled }}'
+  become: true
+  when: vmware_tools_manage_service | bool
+  tags: vmware_tools

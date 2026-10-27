@@ -1,0 +1,149 @@
+---
+argument_specs:
+  main:
+    short_description: Entry point for the network role.
+    description:
+    - Validate variables for the `network` role.
+    options:
+      network_backend:
+        description:
+        - Select auto or an explicit supported network backend.
+        required: false
+        type: str
+        choices:
+        - auto
+        - netplan
+        - interfaces
+        - nmcli
+      network_interfaces:
+        description:
+        - Portable interface declarations, compiled before any changes.
+        required: false
+        type: list
+        elements: dict
+        options:
+          name:
+            type: str
+            description:
+            - Linux interface name.
+            required: true
+          type:
+            type: str
+            description:
+            - Interface kind.
+            choices:
+            - ethernet
+            - bridge
+            - bond
+            - vlan
+          dhcp4:
+            type: bool
+            description:
+            - Request an IPv4 address through DHCP.
+          dhcp6:
+            type: bool
+            description:
+            - Request an IPv6 address through DHCP.
+          addresses4:
+            type: list
+            description:
+            - IPv4 addresses in CIDR notation.
+            elements: str
+          addresses6:
+            type: list
+            description:
+            - IPv6 addresses in CIDR notation.
+            elements: str
+          gateway4:
+            type: str
+            description:
+            - Default IPv4 next hop.
+          gateway6:
+            type: str
+            description:
+            - Default IPv6 next hop.
+          dns:
+            type: list
+            description:
+            - Resolver IPv4 or IPv6 addresses.
+            elements: str
+          search:
+            type: list
+            description:
+            - DNS search domains.
+            elements: str
+          mtu:
+            type: int
+            description:
+            - Interface MTU.
+          members:
+            type: list
+            description:
+            - Declared bridge or bond member interfaces.
+            elements: str
+          parent:
+            type: str
+            description:
+            - Declared parent of a VLAN.
+          vlan_id:
+            type: int
+            description:
+            - 802.1Q VLAN identifier.
+          bond_mode:
+            type: str
+            description:
+            - Bonding mode.
+            choices:
+            - active-backup
+            - balance-rr
+            - balance-xor
+            - broadcast
+            - 802.3ad
+            - balance-tlb
+            - balance-alb
+          routes4:
+            type: list
+            description:
+            - Static IPv4 routes.
+            elements: dict
+            options: &id001
+              to:
+                type: str
+                description:
+                - Destination CIDR.
+                required: true
+              via:
+                type: str
+                description:
+                - Next-hop address.
+                required: true
+              metric:
+                type: int
+                description:
+                - Route preference metric.
+          routes6:
+            type: list
+            description:
+            - Static IPv6 routes.
+            elements: dict
+            options: *id001
+      network_apply:
+        description:
+        - Activate changed network configuration; requires console recovery access.
+        required: false
+        type: bool
+      network_allow_backend_migration:
+        description:
+        - Explicitly permit a planned backend migration; does not disable competing managers.
+        required: false
+        type: bool
+      network_manage_service:
+        description:
+        - Start and enable the selected network manager when needed.
+        required: false
+        type: bool
+      network_profile_name:
+        description:
+        - Ownership name for the managed configuration fragment.
+        required: false
+        type: str

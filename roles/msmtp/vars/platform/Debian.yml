@@ -1,0 +1,8 @@
+---
+msmtp_packages:
+- msmtp
+msmtp_config_file: /etc/msmtprc
+msmtp_user: root
+msmtp_group: root
+msmtp_aliases_file: /etc/aliases
+_msmtp_platform_tls_trust_file: /etc/ssl/certs/ca-certificates.crt

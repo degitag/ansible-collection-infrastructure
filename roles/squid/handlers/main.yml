@@ -1,12 +1,18 @@
 ---
 - name: Restart squid
   ansible.builtin.service:
-    name: "{{ squid_service_name }}"
+    name: '{{ squid_service_name }}'
     state: restarted
   become: true
 
+  when:
+  - squid_manage_service | bool
+  - squid_service_state != 'stopped'
 - name: Reload squid
   ansible.builtin.service:
-    name: "{{ squid_service_name }}"
+    name: '{{ squid_service_name }}'
     state: reloaded
   become: true
+  when:
+  - squid_manage_service | bool
+  - squid_service_state != 'stopped'

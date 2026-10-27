@@ -35,3 +35,50 @@ argument_specs:
         - Controls `users_copy_msmtp_config` for the `users` role.
         required: false
         type: bool
+      users_powerline_go_enabled:
+        description:
+        - Controls `users_powerline_go_enabled` for the `users` role.
+        required: false
+        type: bool
+      users_powerline_go_version:
+        description:
+        - Controls `users_powerline_go_version` for the `users` role.
+        required: false
+        type: str
+      users_powerline_go_install_dir:
+        description:
+        - Controls `users_powerline_go_install_dir` for the `users` role.
+        required: false
+        type: str
+      users_powerline_go_binary_name:
+        description:
+        - Controls `users_powerline_go_binary_name` for the `users` role.
+        required: false
+        type: str
+      users_powerline_go_arch_map:
+        description:
+        - Controls `users_powerline_go_arch_map` for the `users` role.
+        required: false
+        type: dict
+      users_powerline_go_checksum:
+        description:
+        - Controls `users_powerline_go_checksum` for the `users` role.
+        required: false
+        type: str
+      users_groups:
+        description:
+        - Controls `users_groups` for the `users` role.
+        required: false
+        type: list
+        elements: dict
+        options:
+          name:
+            type: str
+            required: true
+          state:
+            type: str
+            choices:
+            - present
+            - absent
+          system:
+            type: bool

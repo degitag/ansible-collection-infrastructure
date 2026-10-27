@@ -1,0 +1,4 @@
+---
+_gui_packages:
+- '@Server with GUI'
+- 'firefox'

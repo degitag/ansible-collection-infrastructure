@@ -1,47 +1,7 @@
 ---
-- name: Install BorgBackup
-  ansible.builtin.package:
-    name: borgbackup
-    state: present
-  become: true
-  tags: borgbackup
-
-- name: Create Borg repository directory
-  ansible.builtin.file:
-    path: "{{ borgbackup_repository }}"
-    state: directory
-    owner: root
-    group: root
-    mode: '0755'
-  become: true
-  tags: borgbackup
-
-- name: Configure Borg repository
-  ansible.builtin.command:
-    cmd: "borg init --encryption={{ borgbackup_encryption_mode }} {{ borgbackup_repository }}"
-  args:
-    creates: "{{ borgbackup_repository }}/config"
-  environment:
-    BORG_PASSPHRASE: "{{ borgbackup_encryption_passphrase }}"
-  become: true
-  tags: borgbackup
-
-- name: Schedule backup job
-  ansible.builtin.template:
-    src: borgbackup.sh.j2
-    dest: "{{ borgbackup_script_path }}"
-    mode: '0755'
-    owner: root
-    group: root
-  become: true
-  tags: borgbackup
-
-- name: Create cron job for backups
-  ansible.builtin.cron:
-    name: "BorgBackup"
-    minute: "{{ borgbackup_cron_minute }}"
-    hour: "{{ borgbackup_cron_hour }}"
-    job: "{{ borgbackup_script_path }}"
-    state: present
-  become: true
+- name: Prepare facts and platform variables
+  ansible.builtin.import_tasks: preflight.yml
+  tags: always
+- name: Apply borgbackup configuration
+  ansible.builtin.import_tasks: configuration.yml
   tags: borgbackup

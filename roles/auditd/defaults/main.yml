@@ -3,3 +3,7 @@ auditd_manage_service: true
 auditd_service_enabled: true
 auditd_service_state: started
 auditd_extra_rules: []
+auditd_reset_existing_rules: false
+auditd_shell_commands_enabled: true
+auditd_session_logging_enabled: true
+auditd_remove_legacy_shell_rules: false

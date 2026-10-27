@@ -1,0 +1,47 @@
+---
+argument_specs:
+  main:
+    short_description: Entry point for the prompt role.
+    description:
+    - Validate variables for the `prompt` role.
+    options:
+      prompt_enabled:
+        description:
+        - Controls `prompt_enabled` for the `prompt` role.
+        required: false
+        type: bool
+      prompt_manage_ssh_agent:
+        description:
+        - Controls `prompt_manage_ssh_agent` for the `prompt` role.
+        required: false
+        type: bool
+      prompt_manage_root_dotfiles:
+        description:
+        - Controls `prompt_manage_root_dotfiles` for the `prompt` role.
+        required: false
+        type: bool
+      prompt_install_bcrypt:
+        description:
+        - Controls `prompt_install_bcrypt` for the `prompt` role.
+        required: false
+        type: bool
+      prompt_install_yq:
+        description:
+        - Controls `prompt_install_yq` for the `prompt` role.
+        required: false
+        type: bool
+      prompt_yq_version:
+        description:
+        - Controls `prompt_yq_version` for the `prompt` role.
+        required: false
+        type: str
+      prompt_yq_checksum:
+        description:
+        - Controls `prompt_yq_checksum` for the `prompt` role.
+        required: false
+        type: str
+      prompt_git_branch:
+        description:
+        - Controls `prompt_git_branch` for the `prompt` role.
+        required: false
+        type: bool

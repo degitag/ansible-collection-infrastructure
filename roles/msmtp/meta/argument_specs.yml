@@ -47,12 +47,18 @@ argument_specs:
         type: bool
       msmtp_accounts:
         description:
-        - Controls `msmtp_accounts` for the `msmtp` role.
-        required: false
+        - Required operator-provided relay accounts. No placeholder credentials or relay endpoint is installed by default.
+        required: true
         type: list
+        no_log: true
         elements: dict
       msmtp_aliases:
         description:
         - Controls `msmtp_aliases` for the `msmtp` role.
         required: false
         type: dict
+      msmtp_tls_trust_file:
+        description:
+        - Controls `msmtp_tls_trust_file` for the `msmtp` role.
+        required: false
+        type: str

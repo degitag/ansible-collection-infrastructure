@@ -8,11 +8,13 @@ sftp_server_service_state: started
 sftp_server_allow_password_auth: false
 sftp_server_allow_public_key_auth: true
 sftp_server_default_password_lock: true
-sftp_server_default_shell: ""
+sftp_server_default_shell: ''
 sftp_server_home_subdirectory: data
 sftp_server_default_directories:
 - data
-sftp_server_directory_mode: "0750"
+sftp_server_directory_mode: '0750'
 sftp_server_remove_chroot_on_absent: false
 sftp_server_internal_sftp_options: []
 sftp_server_users: []
+sftp_server_authorized_keys_dir: /etc/ssh/authorized_keys
+sftp_server_manage_selinux: true

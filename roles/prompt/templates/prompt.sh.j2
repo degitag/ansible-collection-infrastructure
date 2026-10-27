@@ -1,0 +1,12 @@
+{{ ansible_managed | comment }}
+# Only interactive Bash shells receive a prompt.
+if [ -n "${BASH_VERSION:-}" ]; then
+    case $- in
+        *i*)
+{% if prompt_git_branch %}
+            . {{ _prompt_profile_dir }}/git-prompt.sh
+{% endif %}
+            PS1='\u@\h:\w{% if prompt_git_branch %}$(parse_git_branch){% endif %}\$ '
+            ;;
+    esac
+fi

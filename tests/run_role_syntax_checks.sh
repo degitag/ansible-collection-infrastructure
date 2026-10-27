@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
-for playbook in roles/*/tests/test.yml; do
-  ansible-playbook --syntax-check "$playbook"
+cd "$(dirname "$0")/.."
+shopt -s nullglob
+for playbook in roles/*/tests/test.yml roles/*/tests/functional.yml playbooks/*.yml tests/integration/*.yml; do
+  # Example inventories are data, not playbooks.
+  [[ "$playbook" == *.example.yml ]] && continue
+  ansible-playbook --syntax-check "$playbook" -i localhost,
 done

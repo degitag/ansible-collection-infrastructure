@@ -45,6 +45,51 @@ argument_specs:
         - Controls `unbound_manage_selinux` for the `unbound` role.
         required: false
         type: bool
+      unbound_service_name:
+        description:
+        - Controls `unbound_service_name` for the `unbound` role.
+        required: false
+        type: str
+      unbound_group:
+        description:
+        - Controls `unbound_group` for the `unbound` role.
+        required: false
+        type: str
+      unbound_config_dir:
+        description:
+        - Controls `unbound_config_dir` for the `unbound` role.
+        required: false
+        type: str
+      unbound_config_path:
+        description:
+        - Controls `unbound_config_path` for the `unbound` role.
+        required: false
+        type: str
+      unbound_root_hints_path:
+        description:
+        - Controls `unbound_root_hints_path` for the `unbound` role.
+        required: false
+        type: str
+      unbound_local_zones_path:
+        description:
+        - Controls `unbound_local_zones_path` for the `unbound` role.
+        required: false
+        type: str
+      unbound_blocklist_path:
+        description:
+        - Controls `unbound_blocklist_path` for the `unbound` role.
+        required: false
+        type: str
+      unbound_tls_cert_bundle:
+        description:
+        - Controls `unbound_tls_cert_bundle` for the `unbound` role.
+        required: false
+        type: str
+      unbound_checkconf_binary:
+        description:
+        - Controls `unbound_checkconf_binary` for the `unbound` role.
+        required: false
+        type: str
       unbound_zones_dir:
         description:
         - Controls `unbound_zones_dir` for the `unbound` role.

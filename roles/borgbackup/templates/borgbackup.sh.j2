@@ -1,22 +1,18 @@
 #!/bin/bash
-
 set -euo pipefail
 
-BORG_REPO="{{ borgbackup_repository }}"
-BORG_PASSPHRASE="{{ borgbackup_encryption_passphrase }}"
-ARCHIVE_NAME="{{ inventory_hostname }}-{{ borgbackup_archive_name }}"
-
+BORG_REPO={{ borgbackup_repository | quote }}
+BORG_PASSPHRASE={{ borgbackup_encryption_passphrase | quote }}
+ARCHIVE_NAME={{ (inventory_hostname ~ '-' ~ borgbackup_archive_name) | quote }}
 export BORG_PASSPHRASE
-
-borg create --verbose --stats --progress \
-    "${BORG_REPO}::${ARCHIVE_NAME}" \
+sources=(
 {% for source_path in borgbackup_source_paths %}
-    {{ source_path }}{{ ' \\' if not loop.last else '' }}
+    {{ source_path | quote }}
 {% endfor %}
-
+)
+borg create --verbose --stats "${BORG_REPO}::${ARCHIVE_NAME}" "${sources[@]}"
 borg prune --list "${BORG_REPO}" \
-    --keep-daily={{ borgbackup_keep_daily }} \
-    --keep-weekly={{ borgbackup_keep_weekly }} \
-    --keep-monthly={{ borgbackup_keep_monthly }}
-
+    --keep-daily={{ borgbackup_keep_daily | int }} \
+    --keep-weekly={{ borgbackup_keep_weekly | int }} \
+    --keep-monthly={{ borgbackup_keep_monthly | int }}
 unset BORG_PASSPHRASE

@@ -4,4 +4,19 @@ argument_specs:
     short_description: Entry point for the motd role.
     description:
     - Validate variables for the `motd` role.
-    options: {}
+    options:
+      motd_description:
+        description:
+        - Controls `motd_description` for the `motd` role.
+        required: false
+        type: str
+      motd_responsible:
+        description:
+        - Controls `motd_responsible` for the `motd` role.
+        required: false
+        type: str
+      motd_remove_vendor_scripts:
+        description:
+        - Controls `motd_remove_vendor_scripts` for the `motd` role.
+        required: false
+        type: bool

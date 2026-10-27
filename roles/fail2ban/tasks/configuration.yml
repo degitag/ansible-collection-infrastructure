@@ -1,0 +1,90 @@
+---
+- name: Configure the documented EPEL package source on EL9
+  ansible.builtin.include_role:
+    name: degitag.infrastructure.dnf_repos
+    tasks_from: epel
+  when:
+  - ansible_facts.os_family == 'RedHat'
+  - fail2ban_manage_epel | bool
+- name: Ensure package is installed
+  ansible.builtin.package:
+    name: fail2ban
+    state: present
+    policy_rc_d: "{{ 101 if ansible_facts.os_family == 'Debian' and not (fail2ban_manage_service | bool and fail2ban_service_state == 'started') else omit }}"
+  become: true
+  tags: fail2ban
+
+- name: Update configuration file - fail2ban.local
+  ansible.builtin.template:
+    src: fail2ban.local.j2
+    dest: /etc/fail2ban/fail2ban.local
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart fail2ban
+  become: true
+  tags: fail2ban
+
+- name: Update jail configuration file - jail.local
+  ansible.builtin.template:
+    src: jail.local.j2
+    dest: /etc/fail2ban/jail.local
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart fail2ban
+  become: true
+  tags: fail2ban
+
+- name: Create jail configurations
+  ansible.builtin.template:
+    src: jail.d.j2
+    dest: /etc/fail2ban/jail.d/{{ item.name }}.conf
+    owner: root
+    group: root
+    mode: '0644'
+  loop: '{{ fail2ban_jails }}'
+  when: item.jail_options is defined
+  notify: Restart fail2ban
+  become: true
+  tags: fail2ban
+
+- name: Create filter configurations
+  ansible.builtin.template:
+    src: filters.d.j2
+    dest: /etc/fail2ban/filter.d/{{ item.name }}.conf
+    owner: root
+    group: root
+    mode: '0644'
+  loop: '{{ fail2ban_jails }}'
+  when: item.filter_options is defined
+  notify: Restart fail2ban
+  become: true
+  tags: fail2ban
+
+- name: Create action configurations
+  ansible.builtin.template:
+    src: action.d.j2
+    dest: /etc/fail2ban/action.d/{{ item.name }}.conf
+    owner: root
+    group: root
+    mode: '0644'
+  loop: '{{ fail2ban_jails }}'
+  when: item.action_options is defined
+  notify: Restart fail2ban
+  become: true
+  tags: fail2ban
+
+- name: Ensure service is started and enabled
+  ansible.builtin.service:
+    name: fail2ban
+    state: '{{ fail2ban_service_state }}'
+    enabled: '{{ fail2ban_service_enabled }}'
+  become: true
+  when: fail2ban_manage_service | bool
+  tags: fail2ban
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers
+  become: true
+  tags: fail2ban

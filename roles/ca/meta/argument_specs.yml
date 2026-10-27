@@ -10,3 +10,13 @@ argument_specs:
         - Controls `ca_source_path` for the `ca` role.
         required: false
         type: str
+      ca_require_certificates:
+        description:
+        - Controls `ca_require_certificates` for the `ca` role.
+        required: false
+        type: bool
+      ca_verify_certificates:
+        description:
+        - Controls `ca_verify_certificates` for the `ca` role.
+        required: false
+        type: bool

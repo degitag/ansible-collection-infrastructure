@@ -1,3 +1,6 @@
+{% if nginx_manage_stream_module | bool and (nginx_streams + nginx_stream_servers + nginx_stream_upstreams + nginx_stream_maps) | length > 0 %}
+load_module {{ _nginx_stream_module }};
+{% endif %}
 user  {{ nginx_user }};
 
 error_log  {{ nginx_error_log }};
@@ -79,3 +82,63 @@ http {
 
     {% block http_end %}{% endblock %}
 }
+{% if (nginx_streams | length > 0) or (nginx_stream_upstreams | length > 0) or (nginx_stream_servers | length > 0) %}
+stream {
+{% for upstream in nginx_stream_upstreams %}
+    upstream {{ upstream.name }} {
+{% for server in upstream.servers %}
+        server {{ server }};
+{% endfor %}
+    }
+{% endfor %}
+
+{% for stream_map in nginx_stream_maps %}
+    map {{ stream_map.source }} {{ stream_map.variable }} {
+{% if stream_map.default is defined %}
+        default {{ stream_map.default }};
+{% endif %}
+{% for entry in stream_map.entries %}
+        {{ entry.match }} {{ entry.value }};
+{% endfor %}
+    }
+{% endfor %}
+
+{% for server in nginx_stream_servers %}
+    server {
+{% for listen in server.listen %}
+        listen {{ listen }};
+{% endfor %}
+{% if server.ssl_preread | default(false) | bool %}
+        ssl_preread on;
+{% endif %}
+        proxy_pass {{ server.proxy_pass }};
+{% if server.proxy_timeout is defined %}
+        proxy_timeout {{ server.proxy_timeout }};
+{% endif %}
+{% if server.proxy_connect_timeout is defined %}
+        proxy_connect_timeout {{ server.proxy_connect_timeout }};
+{% endif %}
+    }
+{% endfor %}
+
+{% for stream in nginx_streams %}
+    upstream {{ stream.name }}_backend {
+        server {{ stream.proxy_pass }};
+    }
+
+    server {
+        listen {{ stream.listen }};
+{% if stream.listen_ipv6 is defined %}
+        listen {{ stream.listen_ipv6 }};
+{% endif %}
+        proxy_pass {{ stream.name }}_backend;
+{% if stream.proxy_timeout is defined %}
+        proxy_timeout {{ stream.proxy_timeout }};
+{% endif %}
+{% if stream.proxy_connect_timeout is defined %}
+        proxy_connect_timeout {{ stream.proxy_connect_timeout }};
+{% endif %}
+    }
+{% endfor %}
+}
+{% endif %}

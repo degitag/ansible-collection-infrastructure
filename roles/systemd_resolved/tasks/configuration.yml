@@ -1,0 +1,35 @@
+---
+- name: Validate supported platforms
+  ansible.builtin.assert:
+    that:
+    - ansible_facts.os_family == "Debian"
+    fail_msg: The systemd_resolved role currently supports Debian and Ubuntu systems only.
+  tags: resolved
+
+- name: Create resolved.conf.d directory
+  ansible.builtin.file:
+    path: /etc/systemd/resolved.conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  tags: resolved
+
+- name: Configure /etc/systemd/resolved.conf.d/resolved.conf
+  ansible.builtin.template:
+    src: resolved.conf.j2
+    dest: /etc/systemd/resolved.conf.d/resolved.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart systemd-resolved
+  tags: resolved
+
+- name: Link /etc/resolv.conf to systemd-resolved
+  ansible.builtin.file:
+    src: /run/systemd/resolve/resolv.conf
+    dest: /etc/resolv.conf
+    state: link
+    force: true
+  notify: Restart systemd-resolved
+  tags: resolved

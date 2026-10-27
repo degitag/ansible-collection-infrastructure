@@ -1,6 +1,3 @@
 ---
 proxy_env: {}
-# proxy_env:
-#   http_proxy: 'http://squid01.local:3128'
-#   https_proxy: 'http://squid01.local:3128'
-#   no_proxy: 'localhost,127.0.0.1,::1,*.local,192.168.0.0/16,10.0.0.0/8'
+proxy_manage_pip: true

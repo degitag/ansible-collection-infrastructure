@@ -1,6 +1,0 @@
----
-nmcli_packages:
-- NetworkManager
-- python3-libsemanage
-- python3-policycoreutils
-nmcli_service_name: NetworkManager

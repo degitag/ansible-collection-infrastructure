@@ -1,15 +1,16 @@
 ---
-sssd_domain_name: "example.com"
+sssd_domain_name: ''
 sssd_join_domain: false
 sssd_restrict_access: true
 sssd_manage_mkhomedir: true
 sssd_manage_service: true
 sssd_service_enabled: true
 sssd_service_state: started
-sssd_ad_group_allowed_ssh_and_sudo: "Linux-Admins"
+sssd_ad_group_allowed_ssh_and_sudo: Linux-Admins
 sssd_ad_group_allowed_ssh_and_sudo_extra: []
-sssd_ad_group_allowd_ssh_and_sudo: "{{ sssd_ad_group_allowed_ssh_and_sudo }}"
-sssd_ad_group_allowd_ssh_and_sudo_extra: "{{ sssd_ad_group_allowed_ssh_and_sudo_extra }}"
-sssd_ou_to_join_servers: ""
-sssd_bind_user: ""
-sssd_bind_password: ""
+sssd_ad_group_allowd_ssh_and_sudo: '{{ sssd_ad_group_allowed_ssh_and_sudo }}'
+sssd_ad_group_allowd_ssh_and_sudo_extra: '{{ sssd_ad_group_allowed_ssh_and_sudo_extra }}'
+sssd_ou_to_join_servers: ''
+sssd_bind_user: ''
+sssd_bind_password: ''
+sssd_ad_group_allowed_ssh: []

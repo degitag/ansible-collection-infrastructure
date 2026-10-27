@@ -1,31 +1,7 @@
 ---
-- name: Install Debian GUI packages
-  ansible.builtin.apt:
-    name: "{{ gui_debian_packages }}"
-    state: present
-    update_cache: true
-  when:
-  - gui_enabled | bool
-  - ansible_os_family == "Debian"
-  become: true
-  tags: gui
-
-- name: Install RedHat GUI group and browser packages
-  ansible.builtin.dnf:
-    name: "{{ ['@' ~ gui_redhat_group_name] + gui_redhat_packages }}"
-    state: present
-  when:
-  - gui_enabled | bool
-  - ansible_os_family == "RedHat"
-  become: true
-  tags: gui
-
-- name: Set graphical systemd target as default
-  ansible.builtin.file:
-    src: "/usr/lib/systemd/system/{{ gui_default_target }}"
-    dest: "/etc/systemd/system/default.target"
-    state: link
-    force: true
-  when: gui_enabled | bool
-  become: true
+- name: Prepare facts and platform variables
+  ansible.builtin.import_tasks: preflight.yml
+  tags: always
+- name: Apply gui configuration
+  ansible.builtin.import_tasks: configuration.yml
   tags: gui

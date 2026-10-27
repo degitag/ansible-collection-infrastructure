@@ -1,0 +1,15 @@
+---
+_conditional_reboot_packages:
+- python3
+- dnf-utils
+_conditional_reboot_requirement_file: ''
+_conditional_reboot_requirement_command:
+- /usr/bin/needs-restarting
+- -r
+_conditional_reboot_command:
+- /usr/bin/systemctl
+- reboot
+_conditional_reboot_script: /usr/local/sbin/reboot-check.py
+_conditional_reboot_config: /etc/conditional-reboot.json
+_conditional_reboot_unit_dir: /etc/systemd/system
+_conditional_reboot_timer: reboot-check.timer

@@ -1,0 +1,31 @@
+---
+- name: Ensure MOTD script directory exists
+  ansible.builtin.file:
+    path: '{{ _motd_script_path | dirname }}'
+    state: directory
+    mode: '0755'
+  become: true
+- name: Replace the static MOTD with the managed login script
+  ansible.builtin.copy:
+    content: ''
+    dest: /etc/motd
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+- name: Configure the validated login message script
+  ansible.builtin.template:
+    src: linux.j2
+    dest: '{{ _motd_script_path }}'
+    owner: root
+    group: root
+    mode: '0755'
+    validate: /bin/sh -n %s
+  become: true
+- name: Remove explicitly disabled vendor login messages
+  ansible.builtin.file:
+    path: '{{ item }}'
+    state: absent
+  loop: '{{ _motd_vendor_scripts }}'
+  when: motd_remove_vendor_scripts | bool
+  become: true

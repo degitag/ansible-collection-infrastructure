@@ -1,12 +1,14 @@
 ---
 - name: Validate wpad webserver configuration
-  ansible.builtin.command: "{{ _wpad_webserver.validate_command }}"
+  ansible.builtin.command: '{{ _wpad_webserver.validate_command }}'
   changed_when: false
   become: true
 
 - name: Reload wpad webserver
   ansible.builtin.service:
-    name: "{{ _wpad_webserver.service_name }}"
+    name: '{{ _wpad_webserver.service_name }}'
     state: reloaded
   become: true
-  when: wpad_manage_service | bool
+  when:
+  - wpad_manage_service | bool
+  - wpad_service_state != 'stopped'

@@ -3,18 +3,35 @@
 ## Audit rules for user sessions
 ## This will log execve calls (commands) for all users
 
-## Remove any previous rules (optional, depending on OS handling)
+## Clearing rules outside this role requires an explicit operator choice.
+{% if auditd_reset_existing_rules | bool %}
 -D
+{% else %}
+{% for key in ['degit-user-cmd', 'degit-session', 'degit-logins'] + _auditd_extra_keys %}
+-D -k {{ key }}
+{% endfor %}
+{% endif %}
 
 ## Default rules
 
 ## Log execve syscalls (basically every command execution)
--a always,exit -F arch=b64 -S execve -k user-cmd
--a always,exit -F arch=b32 -S execve -k user-cmd
+{% if auditd_shell_commands_enabled | bool %}
+-a always,exit -F arch=b64 -S execve -k degit-user-cmd
+{% if ansible_facts.architecture == 'x86_64' %}
+-a always,exit -F arch=b32 -S execve -k degit-user-cmd
+{% endif %}
+
+{% endif %}
 
 ## Make sure session events are logged
--w /var/run/utmp -p wa -k session
--w /var/log/wtmp -p wa -k logins
--w /var/log/btmp -p wa -k logins
+{% if auditd_session_logging_enabled | bool %}
+-w /var/run/utmp -p wa -k degit-session
+-w /var/log/wtmp -p wa -k degit-logins
+-w /var/log/btmp -p wa -k degit-logins
+
+{% endif %}
 
 ## Add additional custom rules below if needed
+{% for rule in auditd_extra_rules %}
+{{ rule }}
+{% endfor %}

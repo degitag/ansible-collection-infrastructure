@@ -2,7 +2,7 @@
 logrotate_manage_package: true
 logrotate_package_state: present
 logrotate_config_dir: /etc/logrotate.d
-logrotate_file_prefix: onkeldom-
+logrotate_file_prefix: degit-
 logrotate_prune_managed_files: false
 
 logrotate_rule_defaults:
@@ -18,7 +18,7 @@ logrotate_rule_defaults:
   dateext: false
   dateyesterday: false
   create: false
-  create_mode: "0640"
+  create_mode: '0640'
   create_owner: root
   create_group: root
   su_user:
@@ -35,10 +35,10 @@ logrotate_rule_defaults:
   mail:
   mailfirst: false
   maillast: false
-  firstaction: ""
-  prerotate: ""
-  postrotate: ""
-  lastaction: ""
+  firstaction: ''
+  prerotate: ''
+  postrotate: ''
+  lastaction: ''
   extra_directives: []
 
 logrotate_rules: []

@@ -1,23 +1,23 @@
 ---
-- name: "Creating errors logs and maintenance directories"
+- name: Creating errors logs and maintenance directories
   ansible.builtin.file:
-    dest: "{{ item }}"
+    dest: '{{ item }}'
     state: directory
     force: true
-    owner: "{{ _apache_vhosts_user }}"
-    group: "{{ _apache_vhosts_group }}"
-    mode: 0755
+    owner: '{{ _apache_vhosts_user }}'
+    group: '{{ _apache_vhosts_group }}'
+    mode: '0755'
   loop:
-  - "{{ apache_default_vhost_path }}/errors"
-  - "{{ apache_vhosts_directory }}/maintenance"
+  - '{{ apache_default_vhost_path }}/errors'
+  - '{{ apache_vhosts_directory }}/maintenance'
 
-- name: "Adding errors HTML files"
+- name: Adding errors HTML files
   ansible.builtin.copy:
-    src: "errors/{{ item }}"
-    dest: "{{ apache_default_vhost_path }}/errors"
-    owner: "{{ _apache_vhosts_user }}"
-    group: "{{ _apache_vhosts_group }}"
-    mode: 0644
+    src: errors/{{ item }}
+    dest: '{{ apache_default_vhost_path }}/errors'
+    owner: '{{ _apache_vhosts_user }}'
+    group: '{{ _apache_vhosts_group }}'
+    mode: '0644'
   with_items:
   - 401.html
   - 403.html
@@ -25,13 +25,13 @@
   - 500.html
   - 503.html
 
-- name: "Include tasks for apply config in {{ _ansible_os_family }}"
-  ansible.builtin.include_tasks: "{{ _ansible_os_family }}/conf.yml"
+- name: Include tasks for apply config in {{ _ansible_os_family }}
+  ansible.builtin.include_tasks: '{{ _ansible_os_family }}/conf.yml'
 
-- name: "Adding logrotate configuration files"
+- name: Adding logrotate configuration files
   ansible.builtin.template:
-    src: "logrotate.conf.j2"
-    dest: "/etc/logrotate.d/{{ _apache_package_name }}"
-    owner: "{{ apache_logrotate_user }}"
-    group: "{{ apache_logrotate_group }}"
-    mode: 0644
+    src: logrotate.conf.j2
+    dest: /etc/logrotate.d/{{ _apache_package_name }}
+    owner: '{{ apache_logrotate_user }}'
+    group: '{{ apache_logrotate_group }}'
+    mode: '0644'

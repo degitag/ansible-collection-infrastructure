@@ -1,0 +1,177 @@
+---
+- name: Normalize Docker proxy environment
+  ansible.builtin.set_fact:
+    _docker_proxy_environment: '{{ docker_proxy_env | degitag.infrastructure.proxy_environment(fallback_all=true) }}'
+  no_log: true
+- name: Reject conflicting Docker proxy configuration sources
+  ansible.builtin.assert:
+    that:
+    - not (docker_manage_proxy | bool) or 'proxies' not in docker_daemon_config
+    fail_msg: Choose docker_proxy_env with docker_manage_proxy, or disable docker_manage_proxy and own daemon.json proxies explicitly.
+- name: Validate supported platform
+  ansible.builtin.assert:
+    that:
+    - ansible_facts.os_family in ["Debian", "RedHat"]
+    - (ansible_facts.os_family == "Debian" and ((ansible_facts.distribution == "Ubuntu" and ansible_facts.distribution_major_version | int >= 22) or (ansible_facts.distribution == "Debian" and ansible_facts.distribution_major_version | int >= 12))) or (ansible_facts.os_family == "RedHat" and ansible_facts.distribution_major_version | int >= 9)
+    - ansible_facts.os_family != "Debian" or ansible_facts.architecture in docker_apt_architecture_map
+    fail_msg: The docker role supports Ubuntu 22.04+, Debian 12+, and RedHat-family 9+ systems with a supported architecture.
+  tags: docker
+- name: Remove conflicting Docker packages
+  ansible.builtin.package:
+    name: '{{ docker_conflicting_packages }}'
+    state: absent
+    policy_rc_d: '{{ 101 if ansible_facts.os_family == ''Debian'' and not (docker_manage_service | bool and docker_service_state == ''started'') else omit }}'
+  when: docker_remove_conflicting_packages | bool
+  become: true
+  tags: docker
+  environment: '{{ _docker_proxy_environment }}'
+- name: Install repository prerequisite packages
+  ansible.builtin.package:
+    name: '{{ docker_repository_prerequisite_packages }}'
+    state: present
+    policy_rc_d: '{{ 101 if ansible_facts.os_family == ''Debian'' and not (docker_manage_service | bool and docker_service_state == ''started'') else omit }}'
+  when: docker_manage_repository | bool
+  become: true
+  tags: docker
+  environment: '{{ _docker_proxy_environment }}'
+- name: Ensure apt keyring directory exists
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  when:
+  - docker_manage_repository | bool
+  - ansible_facts.os_family == "Debian"
+  become: true
+  tags: docker
+- name: Install Docker apt signing key
+  ansible.builtin.get_url:
+    url: '{{ docker_repository_gpg_key_url }}'
+    dest: '{{ docker_apt_keyring_path }}'
+    owner: root
+    group: root
+    mode: '0644'
+  when:
+  - docker_manage_repository | bool
+  - ansible_facts.os_family == "Debian"
+  become: true
+  tags: docker
+  environment: '{{ _docker_proxy_environment }}'
+- name: Configure Docker apt repository
+  ansible.builtin.template:
+    src: docker.sources.j2
+    dest: /etc/apt/sources.list.d/docker.sources
+    owner: root
+    group: root
+    mode: '0644'
+  when:
+  - docker_manage_repository | bool
+  - ansible_facts.os_family == "Debian"
+  become: true
+  tags: docker
+- name: Configure Docker yum repository
+  ansible.builtin.yum_repository:
+    name: docker-ce-stable
+    description: Docker CE Stable - $basearch
+    baseurl: '{{ docker_yum_repository_baseurl }}'
+    enabled: true
+    gpgcheck: true
+    gpgkey: '{{ docker_repository_gpg_key_url }}'
+  when:
+  - docker_manage_repository | bool
+  - ansible_facts.os_family == "RedHat"
+  become: true
+  tags: docker
+- name: Refresh apt cache after repository changes
+  ansible.builtin.apt:
+    update_cache: true
+    policy_rc_d: '{{ 101 if ansible_facts.os_family == ''Debian'' and not (docker_manage_service | bool and docker_service_state == ''started'') else omit }}'
+  when:
+  - docker_manage_repository | bool
+  - ansible_facts.os_family == "Debian"
+  become: true
+  tags: docker
+  environment: '{{ _docker_proxy_environment }}'
+- name: Install Docker packages
+  ansible.builtin.package:
+    name: '{{ docker_packages }}'
+    state: present
+    policy_rc_d: '{{ 101 if ansible_facts.os_family == ''Debian'' and not (docker_manage_service | bool and docker_service_state == ''started'') else omit }}'
+  become: true
+  tags: docker
+  environment: '{{ _docker_proxy_environment }}'
+- name: Create Docker proxy drop-in directory
+  ansible.builtin.file:
+    path: '{{ _docker_proxy_dropin | dirname }}'
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  when: docker_manage_proxy | bool
+  become: true
+- name: Render Docker daemon proxy environment
+  ansible.builtin.template:
+    src: http-proxy.conf.j2
+    dest: '{{ _docker_proxy_dropin }}'
+    owner: root
+    group: root
+    mode: '0600'
+  when:
+  - docker_manage_proxy | bool
+  - (_docker_proxy_environment.http_proxy or _docker_proxy_environment.https_proxy or _docker_proxy_environment.all_proxy) | length > 0
+  no_log: true
+  notify: Restart docker
+  become: true
+- name: Remove owned Docker proxy drop-in when no proxy is configured
+  ansible.builtin.file:
+    path: '{{ _docker_proxy_dropin }}'
+    state: absent
+  when:
+  - docker_manage_proxy | bool
+  - (_docker_proxy_environment.http_proxy or _docker_proxy_environment.https_proxy or _docker_proxy_environment.all_proxy) | length == 0
+  notify: Restart docker
+  become: true
+- name: Ensure Docker configuration directory exists
+  ansible.builtin.file:
+    path: '{{ docker_daemon_config_file | dirname }}'
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  when: docker_manage_daemon_config | bool
+  become: true
+  tags: docker
+- name: Deploy Docker daemon configuration
+  ansible.builtin.template:
+    src: daemon.json.j2
+    dest: '{{ docker_daemon_config_file }}'
+    owner: root
+    group: root
+    mode: '0644'
+    validate: '{{ docker_daemon_validate_binary }} --validate --config-file=%s'
+  when: docker_manage_daemon_config | bool
+  notify: Restart docker
+  become: true
+  tags: docker
+- name: Ensure Docker service is started and enabled
+  ansible.builtin.systemd:
+    name: '{{ docker_service_name }}'
+    enabled: '{{ docker_service_enabled }}'
+    state: '{{ docker_service_state }}'
+    daemon_reload: true
+  when: docker_manage_service | bool
+  become: true
+  tags: docker
+- name: Add operators to the docker group
+  ansible.builtin.user:
+    name: '{{ item }}'
+    groups: '{{ docker_group_name }}'
+    append: true
+  loop: '{{ docker_users }}'
+  when: docker_users | length > 0
+  become: true
+  tags: docker
+- name: Apply Docker configuration before subsequent image pulls
+  ansible.builtin.meta: flush_handlers

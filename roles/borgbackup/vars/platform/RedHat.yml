@@ -1,0 +1,4 @@
+---
+_borgbackup_packages:
+- borgbackup
+- cronie

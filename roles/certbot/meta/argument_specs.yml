@@ -7,10 +7,7 @@ argument_specs:
     options:
       certbot_dns_provider:
         description:
-        - DNS-01 provider for ACME validation.
-        choices:
-        - cloudflare
-        - hetzner
+        - Controls `certbot_dns_provider` for the `certbot` role.
         required: false
         type: str
       certbot_cloudflare_api_email:
@@ -23,11 +20,13 @@ argument_specs:
         - Controls `certbot_cloudflare_api_key` for the `certbot` role.
         required: false
         type: str
+        no_log: true
       certbot_cloudflare_api_token:
         description:
         - Controls `certbot_cloudflare_api_token` for the `certbot` role.
         required: false
         type: str
+        no_log: true
       certbot_cloudflare_credentials_path:
         description:
         - Controls `certbot_cloudflare_credentials_path` for the `certbot` role.
@@ -35,27 +34,28 @@ argument_specs:
         type: str
       certbot_hetzner_api_token:
         description:
-        - Hetzner Cloud DNS API token for the `certbot` role.
+        - Controls `certbot_hetzner_api_token` for the `certbot` role.
         required: false
         type: str
+        no_log: true
       certbot_hetzner_credentials_path:
         description:
-        - Path for the Hetzner Cloud DNS credential file.
+        - Controls `certbot_hetzner_credentials_path` for the `certbot` role.
         required: false
         type: str
       certbot_hetzner_api_url:
         description:
-        - Hetzner Cloud DNS API base URL.
+        - Controls `certbot_hetzner_api_url` for the `certbot` role.
         required: false
         type: str
       certbot_hetzner_ttl:
         description:
-        - TTL for temporary Hetzner Cloud DNS TXT records.
+        - Controls `certbot_hetzner_ttl` for the `certbot` role.
         required: false
         type: int
       certbot_hetzner_hook_path:
         description:
-        - Path for the Hetzner Cloud DNS Certbot hook.
+        - Controls `certbot_hetzner_hook_path` for the `certbot` role.
         required: false
         type: str
       certbot_dns_propagation_seconds:
@@ -88,4 +88,8 @@ argument_specs:
         - Controls `certbot_certs` for the `certbot` role.
         required: false
         type: list
-        elements: dict
+      certbot_manage_epel:
+        description:
+        - Controls `certbot_manage_epel` for the `certbot` role.
+        required: false
+        type: bool

@@ -1,0 +1,46 @@
+---
+- name: Require an explicit SMTP account before changing system mail
+  ansible.builtin.assert:
+    that:
+    - msmtp_accounts | length > 0
+    - msmtp_default_account in (msmtp_accounts | map(attribute='name') | list)
+    fail_msg: Define msmtp_accounts and select an existing msmtp_default_account; no external relay is assumed.
+- name: Install msmtp package
+  ansible.builtin.package:
+    name: '{{ msmtp_packages }}'
+    state: present
+  become: true
+  tags: msmtp
+
+- name: Configure msmtp
+  ansible.builtin.template:
+    src: msmtprc.j2
+    dest: '{{ msmtp_config_file }}'
+    mode: '0600'
+    owner: '{{ msmtp_user }}'
+    group: '{{ msmtp_group }}'
+  become: true
+  tags: msmtp
+
+  no_log: true
+- name: Configure /etc/aliases
+  ansible.builtin.template:
+    src: aliases.j2
+    dest: '{{ msmtp_aliases_file }}'
+    mode: '0644'
+    owner: '{{ msmtp_user }}'
+    group: '{{ msmtp_group }}'
+  when:
+  - msmtp_aliases_enabled | bool
+  - msmtp_aliases | length > 0
+  become: true
+  tags: msmtp
+
+- name: Set msmtp as the default MTA on Debian and RedHat
+  community.general.alternatives:
+    name: mta
+    link: /usr/sbin/sendmail
+    path: /usr/bin/msmtp
+  when: ansible_facts.os_family in ['Debian', 'RedHat']
+  become: true
+  tags: msmtp

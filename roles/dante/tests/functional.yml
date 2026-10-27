@@ -1,7 +1,6 @@
 ---
 - name: Functional test for dante
-  hosts: localhost
-  connection: local
+  hosts: all
   gather_facts: true
   become: true
   vars:
@@ -22,15 +21,14 @@
   tasks:
   - name: Apply dante role
     ansible.builtin.import_role:
-      name: ..
+      name: degitag.infrastructure.dante
 
   - name: Define dante verification variables
     ansible.builtin.set_fact:
-      __dante_config_path: "{{ '/etc/danted.conf' if ansible_os_family == 'Debian' else '/etc/sockd.conf' }}"
-      __dante_validate_binary: "{{ '/usr/sbin/danted' if ansible_os_family == 'Debian' else '/usr/sbin/sockd' }}"
+      __dante_config_path: "{{ '/etc/danted.conf' if ansible_facts.os_family == 'Debian' else '/etc/sockd.conf' }}"
+      __dante_validate_binary: "{{ '/usr/sbin/danted' if ansible_facts.os_family == 'Debian' else '/usr/sbin/sockd' }}"
       __dante_packages: >-
-        {{ ['dante-client', 'dante-server'] if ansible_os_family == 'Debian'
-        else ['dante', 'dante-server'] }}
+        {{ ['dante-server'] if ansible_facts.os_family == 'Debian' else ['dante', 'dante-server'] }}
 
   - name: Gather installed package facts
     ansible.builtin.package_facts:
@@ -54,9 +52,9 @@
     ansible.builtin.assert:
       that:
       - __dante_config_stat.stat.exists
-      - '__dante_packages | difference(ansible_facts.packages.keys() | list) | length == 0'
+      - __dante_packages | difference(ansible_facts.packages.keys() | list) | length == 0
       - '(__dante_config_content.content | b64decode) is search("internal: 0.0.0.0 port = 1080")'
       - '(__dante_config_content.content | b64decode) is search("external: ")'
       - '(__dante_config_content.content | b64decode) is search("socksmethod: none")'
       - '(__dante_config_content.content | b64decode) is search("command: bind connect udpassociate")'
-      fail_msg: "The dante role did not install its packages or render the expected SOCKS configuration."
+      fail_msg: The dante role did not install its packages or render the expected SOCKS configuration.

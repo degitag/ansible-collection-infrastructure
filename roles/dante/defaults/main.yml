@@ -8,11 +8,11 @@ dante_firewall_zone: public
 dante_manage_selinux: true
 dante_listen_address: 0.0.0.0
 dante_listen_port: 1080
-dante_listen_address_ipv6: "::"
+dante_listen_address_ipv6: '::'
 dante_enable_ipv6: true
 dante_selinux_ports:
-- "{{ dante_listen_port }}/tcp"
-dante_external_interface: "{{ ansible_default_ipv4.interface }}"
+- '{{ dante_listen_port }}/tcp'
+dante_external_interface: "{{ ansible_facts.default_ipv4.interface | default('') }}"
 dante_user: sockd
 dante_group: sockd
 dante_log_directory: /var/log/sockd
@@ -21,3 +21,4 @@ dante_client_method: none
 dante_socks_method: none
 dante_client_rules: []
 dante_socks_rules: []
+dante_manage_epel: true

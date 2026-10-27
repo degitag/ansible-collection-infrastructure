@@ -1,0 +1,170 @@
+---
+- name: Validate supported operating systems for wpad
+  ansible.builtin.assert:
+    that:
+    - ansible_facts.os_family in ["Debian", "RedHat"]
+    fail_msg: The wpad role supports Debian and RedHat families only.
+
+- name: Validate supported webservers for wpad
+  ansible.builtin.assert:
+    that:
+    - wpad_webserver in ["apache", "nginx"]
+    fail_msg: The wpad role supports only `apache` and `nginx` as webservers.
+
+- name: Validate required WPAD values when present
+  ansible.builtin.assert:
+    that:
+    - wpad_server_names | length > 0
+    - wpad_return_string | length > 0 or wpad_proxy_targets | length > 0 or wpad_direct_fallback | bool
+    fail_msg: Define at least one server name and either `wpad_return_string`, `wpad_proxy_targets`, or enable `wpad_direct_fallback`.
+  when: wpad_state == "present"
+
+- name: Install SELinux tooling for wpad
+  ansible.builtin.package:
+    name: '{{ wpad_selinux_packages }}'
+    state: present
+    policy_rc_d: "{{ 101 if ansible_facts.os_family == 'Debian' and not (wpad_manage_service | bool and wpad_service_state == 'started') else omit }}"
+  when:
+  - ansible_facts.os_family == "RedHat"
+  - wpad_manage_selinux | bool
+  - ansible_facts.selinux is defined
+  - ansible_facts.selinux.status == "enabled"
+  become: true
+  tags: wpad
+
+- name: Select wpad webserver implementation
+  ansible.builtin.set_fact:
+    _wpad_webserver: '{{ _wpad_webserver_map[wpad_webserver] }}'
+  tags: wpad
+
+- name: Ensure wpad document root exists
+  ansible.builtin.file:
+    path: '{{ wpad_document_root }}'
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  when: wpad_state == "present"
+  become: true
+  tags: wpad
+
+- name: Render proxy auto-configuration file
+  ansible.builtin.template:
+    src: proxy.pac.j2
+    dest: '{{ wpad_document_root }}/{{ wpad_pac_filename }}'
+    owner: root
+    group: root
+    mode: '0644'
+  when: wpad_state == "present"
+  become: true
+  tags: wpad
+
+- name: Remove proxy auto-configuration file
+  ansible.builtin.file:
+    path: '{{ wpad_document_root }}/{{ wpad_pac_filename }}'
+    state: absent
+  when: wpad_state == "absent"
+  become: true
+  tags: wpad
+
+- name: Render wpad webserver configuration
+  ansible.builtin.template:
+    src: '{{ wpad_webserver }}_wpad.conf.j2'
+    dest: '{{ _wpad_webserver.config_path }}'
+    owner: root
+    group: root
+    mode: '0644'
+  when:
+  - wpad_manage_webserver_config | bool
+  - wpad_state == "present"
+  notify:
+  - Validate wpad webserver configuration
+  - Reload wpad webserver
+  become: true
+  tags: wpad
+
+- name: Enable apache site on Debian
+  ansible.builtin.file:
+    src: '{{ _wpad_webserver.config_path }}'
+    dest: '{{ _wpad_webserver.enabled_path }}'
+    state: link
+  when:
+  - wpad_manage_webserver_config | bool
+  - wpad_state == "present"
+  - wpad_webserver == "apache"
+  - ansible_facts.os_family == "Debian"
+  notify:
+  - Validate wpad webserver configuration
+  - Reload wpad webserver
+  become: true
+  tags: wpad
+
+- name: Disable apache site on Debian
+  ansible.builtin.file:
+    path: '{{ _wpad_webserver.enabled_path }}'
+    state: absent
+  when:
+  - wpad_manage_webserver_config | bool
+  - wpad_webserver == "apache"
+  - ansible_facts.os_family == "Debian"
+  - _wpad_webserver.enabled_path | length > 0
+  - wpad_state == "absent"
+  notify:
+  - Validate wpad webserver configuration
+  - Reload wpad webserver
+  become: true
+  tags: wpad
+
+- name: Remove wpad webserver configuration
+  ansible.builtin.file:
+    path: '{{ _wpad_webserver.config_path }}'
+    state: absent
+  when:
+  - wpad_manage_webserver_config | bool
+  - wpad_state == "absent"
+  notify:
+  - Validate wpad webserver configuration
+  - Reload wpad webserver
+  become: true
+  tags: wpad
+
+- name: Ensure wpad webserver service state
+  ansible.builtin.service:
+    name: '{{ _wpad_webserver.service_name }}'
+    enabled: '{{ wpad_service_enabled }}'
+    state: '{{ wpad_service_state }}'
+  when:
+  - wpad_manage_service | bool
+  - wpad_state == "present"
+  become: true
+  tags: wpad
+
+- name: Manage wpad ports through the firewall role
+  ansible.builtin.include_role:
+    name: degitag.infrastructure.firewall
+    apply:
+      tags: wpad
+  vars:
+    firewall_manage_activation: false
+    firewall_rules:
+    - port: '{{ wpad_listen_port }}'
+      protocol: tcp
+      action: allow
+      comment: WPAD
+      zone: '{{ wpad_firewall_zone | default("public") }}'
+  when:
+  - wpad_manage_firewall | bool
+  tags: wpad
+- name: Allow WPAD port in SELinux
+  community.general.seport:
+    ports: '{{ wpad_listen_port }}'
+    proto: tcp
+    setype: '{{ wpad_selinux_port_type }}'
+    state: '{{ wpad_state }}'
+  when:
+  - ansible_facts.os_family == "RedHat"
+  - wpad_manage_selinux | bool
+  - ansible_facts.selinux is defined
+  - ansible_facts.selinux.status == "enabled"
+  become: true
+  tags: wpad

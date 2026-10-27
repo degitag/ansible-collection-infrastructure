@@ -12,7 +12,7 @@ TEMPLATE_DIR = ROOT / "roles" / "wpad" / "templates"
 def render_proxy_pac(context: dict) -> str:
     environment = Environment(loader=FileSystemLoader(str(TEMPLATE_DIR)), trim_blocks=True, lstrip_blocks=True)
     template = environment.get_template("proxy.pac.j2")
-    return template.render(**context)
+    return template.render(**{**context, "ansible_facts": {key.removeprefix("ansible_"): value for key, value in context.items() if key.startswith("ansible_")}})
 
 
 def test_proxy_pac_builds_default_return_chain_from_targets() -> None:

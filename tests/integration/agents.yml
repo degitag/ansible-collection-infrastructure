@@ -1,0 +1,21 @@
+---
+- name: Verify current binary agents and service defaults
+  hosts: all
+  become: true
+  gather_facts: true
+  roles:
+  - role: degitag.infrastructure.traefik
+  - role: degitag.infrastructure.borgmatic
+  tasks:
+  - name: Apply pending agent handlers
+    ansible.builtin.meta: flush_handlers
+  - name: Verify Traefik responds locally
+    ansible.builtin.uri:
+      url: http://127.0.0.1/
+      status_code:
+      - 200
+      - 404
+      use_proxy: false
+  - name: Verify the pinned borgmatic command
+    ansible.builtin.command: /usr/local/bin/borgmatic --version
+    changed_when: false

@@ -186,3 +186,98 @@ argument_specs:
         - Controls `nginx_log_format` for the `nginx` role.
         required: false
         type: str
+      nginx_streams:
+        description:
+        - Optional native stream declarations; see migration examples.
+        required: false
+        type: list
+        elements: dict
+        options:
+          name:
+            type: str
+            required: true
+          proxy_pass:
+            type: str
+            required: true
+          listen:
+            type: str
+            required: true
+          listen_ipv6:
+            type: str
+          proxy_timeout:
+            type: str
+          proxy_connect_timeout:
+            type: str
+      nginx_stream_upstreams:
+        description:
+        - Optional native stream declarations; see migration examples.
+        required: false
+        type: list
+        elements: dict
+        options:
+          name:
+            type: str
+            required: true
+          servers:
+            type: list
+            elements: str
+            required: true
+      nginx_stream_maps:
+        description:
+        - Optional native stream declarations; see migration examples.
+        required: false
+        type: list
+        elements: dict
+        options:
+          source:
+            type: str
+            required: true
+          variable:
+            type: str
+            required: true
+          default:
+            type: str
+          entries:
+            type: list
+            elements: dict
+            required: true
+            options:
+              value:
+                type: str
+                required: true
+              match:
+                type: str
+                required: true
+      nginx_stream_servers:
+        description:
+        - Optional native stream declarations; see migration examples.
+        required: false
+        type: list
+        elements: dict
+        options:
+          listen:
+            type: list
+            elements: str
+            required: true
+          proxy_pass:
+            type: str
+            required: true
+          proxy_timeout:
+            type: str
+            required: false
+          proxy_connect_timeout:
+            type: str
+            required: false
+          ssl_preread:
+            type: bool
+            required: false
+      nginx_extra_packages:
+        description:
+        - Controls `nginx_extra_packages` for the `nginx` role.
+        required: false
+        type: list
+      nginx_manage_stream_module:
+        description:
+        - Controls `nginx_manage_stream_module` for the `nginx` role.
+        required: false
+        type: bool

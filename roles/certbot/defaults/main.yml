@@ -6,14 +6,14 @@ certbot_dns_provider: cloudflare
 certbot_cloudflare_api_email: ""
 certbot_cloudflare_api_key: ""
 certbot_cloudflare_api_token: ""
-certbot_cloudflare_credentials_path: "/etc/letsencrypt/cloudflare.ini"
+certbot_cloudflare_credentials_path: /etc/letsencrypt/cloudflare.ini
 
 # Hetzner Cloud DNS API Credentials
 certbot_hetzner_api_token: ""
-certbot_hetzner_credentials_path: "/etc/letsencrypt/hetzner.ini"
-certbot_hetzner_api_url: "https://api.hetzner.cloud/v1"
+certbot_hetzner_credentials_path: /etc/letsencrypt/hetzner.ini
+certbot_hetzner_api_url: https://api.hetzner.cloud/v1
 certbot_hetzner_ttl: 120
-certbot_hetzner_hook_path: "/etc/letsencrypt/hetzner-dns-hook.py"
+certbot_hetzner_hook_path: /etc/letsencrypt/hetzner-dns-hook.py
 
 certbot_dns_propagation_seconds: 30
 certbot_copy_to_ssl: true
@@ -21,9 +21,5 @@ certbot_copy_destination_dir: /etc/ssl
 certbot_renew_hook: ""
 certbot_acme_email: "{{ certbot_mail | default(certbot_cloudflare_api_email) }}"
 
-certbot_certs:
-- domains:
-  - "{{ ansible_fqdn }}"
-  services:
-  - name: node_exporter
-    action: restart
+certbot_certs: []
+certbot_manage_epel: true

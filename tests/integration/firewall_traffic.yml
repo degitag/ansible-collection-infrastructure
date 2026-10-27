@@ -1,0 +1,90 @@
+---
+- name: Verify live firewall decisions on the isolated test network
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    test_suffix: "{{ inventory_hostname | regex_search('[0-9]+$') | int }}"
+    test_peer: "{{ (groups['all'] | difference([inventory_hostname]) | sort)[0] }}"
+  tasks:
+  - name: Read the administrative connection source
+    ansible.builtin.command: printenv SSH_CONNECTION
+    become: false
+    register: _test_ssh_connection
+    changed_when: false
+
+  - name: Install disposable HTTP listener units
+    ansible.builtin.copy:
+      dest: "/etc/systemd/system/degit-test-{{ item.port }}.service"
+      mode: '0644'
+      content: |
+        [Unit]
+        Description=Disposable degit firewall test listener
+        [Service]
+        ExecStart=/usr/bin/python3 -m http.server {{ item.port }} --bind {{ item.bind }} --directory /tmp
+        Restart=on-failure
+    loop:
+    - {port: 18080, bind: '0.0.0.0'}
+    - {port: 18081, bind: '::'}
+    - {port: 18083, bind: '0.0.0.0'}
+    register: _test_listener_units
+
+  - name: Start disposable listeners
+    ansible.builtin.systemd_service:
+      name: "degit-test-{{ item }}"
+      state: started
+      daemon_reload: "{{ _test_listener_units.changed }}"
+    loop: [18080, 18081, 18083]
+
+  - name: Preserve SSH access and activate the test firewall
+    ansible.builtin.include_role:
+      name: degitag.infrastructure.firewall
+    vars:
+      firewall_manage_activation: true
+      firewall_enabled: true
+      firewall_rules:
+      - port: '22'
+        protocol: tcp
+        source: "{{ _test_ssh_connection.stdout.split()[0] }}"
+        comment: Disposable test administration
+      - port: '18080'
+        protocol: tcp
+        source: 198.18.0.0/24
+      - port: '18081'
+        protocol: tcp
+        source: 2001:db8:de61::/64
+
+  - name: Confirm management connectivity after activation
+    ansible.builtin.wait_for_connection:
+      timeout: 30
+
+  - name: Require allowed IPv4 traffic from another test guest
+    ansible.builtin.uri:
+      url: "http://198.18.0.{{ test_suffix }}:18080/"
+      timeout: 5
+      use_proxy: false
+    delegate_to: "{{ test_peer }}"
+    retries: 5
+    delay: 2
+    register: _test_http4
+    until: _test_http4.status == 200
+
+  - name: Require allowed IPv6 traffic from another test guest
+    ansible.builtin.uri:
+      url: "http://[2001:db8:de61::{{ test_suffix }}]:18081/"
+      timeout: 5
+      use_proxy: false
+    delegate_to: "{{ test_peer }}"
+    retries: 5
+    delay: 2
+    register: _test_http6
+    until: _test_http6.status == 200
+
+  - name: Require denial of an unlisted listener port
+    ansible.builtin.uri:
+      url: "http://198.18.0.{{ test_suffix }}:18083/"
+      timeout: 3
+      use_proxy: false
+    delegate_to: "{{ test_peer }}"
+    register: _test_blocked
+    failed_when: _test_blocked.status != -1

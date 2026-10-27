@@ -1,0 +1,3 @@
+---
+_motd_script_path: /etc/profile.d/motd.sh
+_motd_vendor_scripts: []

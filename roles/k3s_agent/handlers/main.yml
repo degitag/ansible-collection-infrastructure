@@ -1,8 +1,0 @@
----
-- name: Restart k3s-agent
-  ansible.builtin.service:
-    name: k3s-agent
-    state: restarted
-  become: true
-  when: "'k3s-agent.service' in ansible_facts.services"
-

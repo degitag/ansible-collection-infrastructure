@@ -1,0 +1,12 @@
+---
+_packages_platform_install:
+- ca-certificates
+- curl
+- sudo
+- vim
+- tar
+- unzip
+- rsync
+- jq
+- python3
+- cronie

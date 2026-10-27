@@ -1,8 +1,10 @@
 ---
 - name: Restart docker
   ansible.builtin.systemd:
-    name: "{{ docker_service_name }}"
+    name: '{{ docker_service_name }}'
     state: restarted
     daemon_reload: true
-  when: docker_manage_service | bool
+  when:
+  - docker_manage_service | bool
+  - docker_service_state != 'stopped'
   become: true

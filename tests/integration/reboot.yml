@@ -1,0 +1,25 @@
+---
+- name: Verify managed addresses survive a real guest reboot
+  hosts: all
+  become: true
+  gather_facts: false
+  serial: 1
+  tasks:
+  - name: Reboot disposable integration guest
+    ansible.builtin.reboot:
+      reboot_timeout: 180
+      connect_timeout: 5
+
+  - name: Inspect test NIC before any reconciliation
+    ansible.builtin.command: "ip -json address show {{ test_interface | default('ens19') }}"
+    register: _reboot_nic
+    changed_when: false
+
+  - name: Require persistent IPv4 and IPv6 addresses
+    ansible.builtin.assert:
+      that:
+      - (_reboot_nic.stdout | from_json)[0].addr_info | selectattr('family', 'equalto', 'inet') | list | length > 0
+      - (_reboot_nic.stdout | from_json)[0].addr_info | selectattr('family', 'equalto', 'inet6') | list | length > 0
+
+- name: Verify configuration still converges after reboot
+  ansible.builtin.import_playbook: platform.yml

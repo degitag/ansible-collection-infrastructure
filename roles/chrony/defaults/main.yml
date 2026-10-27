@@ -1,6 +1,6 @@
 ---
 chrony_set_time_zone: true
-chrony_timezone: 'Europe/Berlin'
+chrony_timezone: Europe/Berlin
 chrony_manage_ntp: true
 chrony_manage_service: true
 chrony_service_enabled: true

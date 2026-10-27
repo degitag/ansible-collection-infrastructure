@@ -1,0 +1,48 @@
+---
+- name: Install the native resolver only when DNS is declared
+  ansible.builtin.package:
+    name: '{{ _network_dns_packages }}'
+    state: present
+    policy_rc_d: "{{ 101 if ansible_facts.os_family == 'Debian' and not (network_manage_service | bool) else omit }}"
+  when: network_interfaces | selectattr('dns', 'defined') | list | length > 0 or network_interfaces | selectattr('search', 'defined') | list | length > 0
+  become: true
+- name: Enable the native resolver for declared DNS settings
+  ansible.builtin.service:
+    name: '{{ _network_dns_service }}'
+    state: started
+    enabled: true
+  when:
+  - network_interfaces | selectattr('dns', 'defined') | list | length > 0 or network_interfaces | selectattr('search', 'defined') | list | length > 0
+  - network_manage_service | bool
+  become: true
+- name: Ensure ifupdown fragment directory exists
+  ansible.builtin.file:
+    path: /etc/network/interfaces.d
+    state: directory
+    mode: '0755'
+  become: true
+
+- name: Ensure ifupdown reads managed fragments
+  ansible.builtin.lineinfile:
+    path: /etc/network/interfaces
+    line: source /etc/network/interfaces.d/*
+    create: true
+    mode: '0644'
+  become: true
+
+- name: Render managed ifupdown configuration
+  ansible.builtin.template:
+    src: interfaces.j2
+    dest: '{{ _network_config_paths.interfaces }}'
+    owner: root
+    group: root
+    mode: '0644'
+    validate: /usr/sbin/ifquery --interfaces=%s --list
+    backup: true
+  become: true
+  register: _network_render
+- name: Reconcile declared ifupdown interfaces
+  ansible.builtin.include_tasks: apply_interfaces.yml
+  when:
+  - network_apply | bool and not ansible_check_mode
+  - _network_render.changed or (network_interfaces | degitag.infrastructure.network_needs_apply(_network_runtime.stdout | from_json))

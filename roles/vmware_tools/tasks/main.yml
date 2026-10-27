@@ -1,28 +1,7 @@
 ---
-- name: Gather operating system variables
-  ansible.builtin.include_vars: "{{ item }}"
-  with_first_found:
-  - "{{ ansible_distribution | lower }}-{{ ansible_distribution_version | lower }}.yml"
-  - "{{ ansible_distribution | lower }}-{{ ansible_distribution_major_version | lower }}.yml"
-  - "{{ ansible_distribution_file_variety | lower }}-{{ ansible_distribution_major_version | lower }}.yml"
-  - "{{ ansible_os_family | lower }}-{{ ansible_distribution_major_version | lower }}.yml"
-  - "{{ ansible_distribution | lower }}.yml"
-  - "{{ ansible_os_family | lower }}-{{ ansible_distribution_version.split('.')[0] }}.yml"
-  - "{{ ansible_os_family | lower }}.yml"
-  tags: vmware_tools
-
-- name: Install package
-  ansible.builtin.package:
-    name: "{{ vmware_tools_package_name }}"
-    state: "{{ vmware_tools_package_state }}"
-  become: true
-  tags: vmware_tools
-
-- name: Start and enable service
-  ansible.builtin.service:
-    name: "{{ vmware_tools_service_name }}"
-    state: "{{ vmware_tools_service_state }}"
-    enabled: "{{ vmware_tools_service_enabled }}"
-  become: true
-  when: vmware_tools_manage_service | bool
+- name: Prepare facts and platform variables
+  ansible.builtin.import_tasks: preflight.yml
+  tags: always
+- name: Apply vmware_tools configuration
+  ansible.builtin.import_tasks: configuration.yml
   tags: vmware_tools

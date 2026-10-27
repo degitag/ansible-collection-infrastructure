@@ -1,0 +1,129 @@
+---
+- name: Validate supported platform
+  ansible.builtin.assert:
+    that:
+    - ansible_facts.os_family in ["Debian", "RedHat"]
+    fail_msg: The sftp_server role supports Debian and RedHat families only.
+  tags: sftp_server
+
+- name: Install OpenSSH server package
+  ansible.builtin.package:
+    name: '{{ sftp_server_package_name }}'
+    state: present
+    policy_rc_d: "{{ 101 if ansible_facts.os_family == 'Debian' and not (sftp_server_manage_service | bool and sftp_server_service_state == 'started') else omit }}"
+  become: true
+  tags: sftp_server
+
+- name: Ensure SFTP group exists
+  ansible.builtin.group:
+    name: '{{ sftp_server_group }}'
+    state: present
+  become: true
+  tags: sftp_server
+
+- name: Ensure base directories exist
+  ansible.builtin.file:
+    path: '{{ sftp_server_base_path }}'
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+  tags: sftp_server
+
+- name: Ensure sshd include directory exists
+  ansible.builtin.file:
+    path: '{{ sftp_server_sshd_config_dir }}'
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+  when: sftp_server_manage_sshd | bool
+  tags: sftp_server
+
+- name: Generate missing SSH host keys on the managed host
+  ansible.builtin.command:
+    argv:
+    - '{{ _sftp_server_keygen_binary }}'
+    - -A
+    creates: '{{ _sftp_server_hostkey_marker }}'
+  become: true
+- name: Ensure the SSH privilege separation directory exists
+  ansible.builtin.file:
+    path: '{{ _sftp_server_runtime_directory }}'
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+- name: Create a root-owned key directory outside all chroots
+  ansible.builtin.file:
+    path: '{{ sftp_server_authorized_keys_dir }}'
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+- name: Deploy sshd SFTP match configuration
+  ansible.builtin.template:
+    src: sftp-match.conf.j2
+    dest: '{{ sftp_server_sshd_match_config_path }}'
+    owner: root
+    group: root
+    mode: '0644'
+    validate: '{{ sftp_server_sshd_binary }} -t -f %s'
+  become: true
+  when: sftp_server_manage_sshd | bool
+  notify: Restart sftp ssh service
+  tags: sftp_server
+
+- name: Manage SFTP users
+  ansible.builtin.include_tasks: manage_user.yml
+  loop: '{{ sftp_server_users }}'
+  loop_control:
+    loop_var: sftp_server_user
+    label: '{{ sftp_server_user.name }}'
+  when: (sftp_server_user.state | default('present')) != 'absent'
+  tags: sftp_server
+
+- name: Remove absent SFTP users
+  ansible.builtin.include_tasks: remove_user.yml
+  loop: '{{ sftp_server_users }}'
+  loop_control:
+    loop_var: sftp_server_user
+    label: '{{ sftp_server_user.name }}'
+  when: (sftp_server_user.state | default('present')) == 'absent'
+  tags: sftp_server
+
+- name: Ensure the SSH daemon reads the managed SFTP fragment
+  ansible.builtin.lineinfile:
+    path: '{{ _sftp_sshd_config_file }}'
+    line: Include {{ sftp_server_sshd_config_dir }}/*.conf
+    insertbefore: ^Match\s
+    validate: '{{ sftp_server_sshd_binary }} -t -f %s'
+  when: sftp_server_manage_sshd | bool
+  become: true
+  notify: Restart sftp ssh service
+- name: Validate the complete SSH configuration before service changes
+  ansible.builtin.command:
+    argv:
+    - '{{ sftp_server_sshd_binary }}'
+    - -t
+  changed_when: false
+  when: sftp_server_manage_sshd | bool
+  become: true
+- name: Manage SELinux requirements for chrooted SFTP
+  ansible.builtin.include_tasks: selinux.yml
+  when:
+  - ansible_facts.os_family == 'RedHat'
+  - sftp_server_manage_selinux | bool
+  - ansible_facts.selinux.status | default('disabled') == 'enabled'
+- name: Ensure SSH service is enabled
+  ansible.builtin.service:
+    name: '{{ sftp_server_service_name }}'
+    enabled: '{{ sftp_server_service_enabled }}'
+    state: '{{ sftp_server_service_state }}'
+  become: true
+  when: sftp_server_manage_service | bool
+  tags: sftp_server

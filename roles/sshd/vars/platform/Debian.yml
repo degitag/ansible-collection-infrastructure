@@ -1,0 +1,12 @@
+---
+sshd_service_name: ssh
+sshd_validate_binary: /usr/sbin/sshd
+sshd_packages_name:
+- openssh-server
+- openssh-client
+_sshd_default_kex: sntrup761x25519-sha512@openssh.com,curve25519-sha256,diffie-hellman-group-exchange-sha256
+_sshd_runtime_directory: /run/sshd
+_sshd_server_include_glob: /etc/ssh/sshd_config.d/*.conf
+_sshd_hostkey_marker: /etc/ssh/ssh_host_rsa_key
+_sshd_keygen_binary: /usr/bin/ssh-keygen
+_sshd_default_ciphers: chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr

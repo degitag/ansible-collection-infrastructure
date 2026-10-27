@@ -1,51 +1,7 @@
 ---
-- name: Gather operating system variables
-  ansible.builtin.include_vars: "{{ item }}"
-  with_first_found:
-  - "{{ ansible_distribution | lower }}-{{ ansible_distribution_version | lower }}.yml"
-  - "{{ ansible_distribution | lower }}-{{ ansible_distribution_major_version | lower }}.yml"
-  - "{{ ansible_distribution_file_variety | lower }}-{{ ansible_distribution_major_version | lower }}.yml"
-  - "{{ ansible_os_family | lower }}-{{ ansible_distribution_major_version | lower }}.yml"
-  - "{{ ansible_distribution | lower }}.yml"
-  - "{{ ansible_os_family | lower }}-{{ ansible_distribution_version.split('.')[0] }}.yml"
-  - "{{ ansible_os_family | lower }}.yml"
-  tags: unattended-updates
-
-- name: Install package
-  ansible.builtin.package:
-    name: "unattended-upgrades"
-    state: present
-  become: true
-  tags: unattended-updates
-
-- name: Configure unattended-upgrades
-  ansible.builtin.template:
-    src: "unattended-upgrades.j2"
-    dest: "/etc/apt/apt.conf.d/90-ansible-unattended-upgrades"
-    owner: root
-    group: root
-    mode: "0644"
-  become: true
-  tags: unattended-updates
-
-- name: Create hide-esm-in-motd files
-  ansible.builtin.file:
-    path: "{{ item }}"
-    state: touch
-    owner: root
-    group: root
-    mode: '0644'
-  with_items:
-#    - /var/lib/ubuntu-advantage/hide-esm-in-motd
-  - /var/lib/update-notifier/hide-esm-in-motd
-  when: not ansible_distribution == "Debian"
-  become: true
-  tags: unattended-updates
-
-- name: Remove /var/lib/update-notifier/updates-available
-  ansible.builtin.file:
-    path: /var/lib/update-notifier/updates-available
-    state: absent
-  when: not ansible_distribution == "Debian"
-  become: true
-  tags: unattended-updates
+- name: Prepare facts and platform variables
+  ansible.builtin.import_tasks: preflight.yml
+  tags: always
+- name: Apply unattended_updates configuration
+  ansible.builtin.import_tasks: configuration.yml
+  tags: unattended_updates

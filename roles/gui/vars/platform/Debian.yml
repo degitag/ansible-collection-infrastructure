@@ -1,0 +1,4 @@
+---
+_gui_packages:
+- 'task-xfce-desktop'
+- 'firefox-esr'

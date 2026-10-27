@@ -3,11 +3,11 @@
 # System-wide wget configuration file for proxy settings
 
 # Use a proxy server
-{% if proxy_env.http_proxy is defined and proxy_env.http_proxy != '' %}use_proxy = on{% endif %}
+{% if proxy_environment.http_proxy is defined and proxy_environment.http_proxy != '' %}use_proxy = on{% endif %}
 
-{% if proxy_env.http_proxy is defined and proxy_env.http_proxy != '' %}http_proxy = {{ proxy_env.http_proxy }}{% endif %}
+{% if proxy_environment.http_proxy is defined and proxy_environment.http_proxy != '' %}http_proxy = {{ proxy_environment.http_proxy }}{% endif %}
 
-{% if proxy_env.https_proxy is defined and proxy_env.https_proxy != '' %}https_proxy = {{ proxy_env.https_proxy }}{% endif %}
+{% if proxy_environment.https_proxy is defined and proxy_environment.https_proxy != '' %}https_proxy = {{ proxy_environment.https_proxy }}{% endif %}
 
 # Bypass proxy for local addresses
-{% if proxy_env.no_proxy is defined and proxy_env.no_proxy != '' %}no_proxy = {{ proxy_env.no_proxy }}{% endif %}
+{% if proxy_environment.no_proxy is defined and proxy_environment.no_proxy != '' %}no_proxy = {{ proxy_environment.no_proxy }}{% endif %}

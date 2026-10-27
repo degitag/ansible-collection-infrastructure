@@ -2,14 +2,21 @@
 - name: Restart traefik
   ansible.builtin.systemd:
     daemon_reload: true
-    name: "{{ traefik_service_name }}"
+    name: '{{ traefik_service_name }}'
     state: restarted
   become: true
   tags: traefik
 
-- name: Reload traefik
-  ansible.builtin.systemd:
-    name: "{{ traefik_service_name }}"
-    state: reloaded
+  when:
+  - traefik_manage_service | bool
+  - traefik_service_state != 'stopped'
+- name: Restart Traefik when dynamic watching is disabled
+  listen: Traefik dynamic configuration changed
+  ansible.builtin.systemd_service:
+    name: '{{ traefik_service_name }}'
+    state: restarted
+  when:
+  - traefik_manage_service | bool
+  - traefik_service_state != 'stopped'
+  - not (traefik_config.get('providers', {}).get('file', {}).get('watch', true) | bool)
   become: true
-  tags: traefik

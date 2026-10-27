@@ -1,6 +1,0 @@
----
-chrony_config_file: /etc/chrony/chrony.conf
-chrony_service_name: chronyd
-chrony_package_name: chrony
-chrony_uninstall_packages:
-- openntpd

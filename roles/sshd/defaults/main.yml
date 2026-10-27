@@ -6,7 +6,6 @@ sshd_manage_firewall: false
 sshd_firewall_zone: public
 sshd_manage_selinux: true
 sshd_bind_ips: false
-
 sshd_client_defaults:
   ForwardX11Trusted: true
   GSSAPIAuthentication: true
@@ -18,7 +17,6 @@ sshd_client_defaults:
 sshd_client_group_vars: {}
 sshd_client_host_vars: {}
 sshd_client_playbook: {}
-
 sshd_server_defaults:
   AcceptEnv:
   - LANG LC_CTYPE LC_NUMERIC LC_TIME LC_COLLATE LC_MONETARY LC_MESSAGES
@@ -41,15 +39,15 @@ sshd_server_defaults:
   LoginGraceTime: 30
   StrictModes: "yes"
   MaxStartups: 200
-  Subsystem: 'sftp internal-sftp'
+  Subsystem: sftp internal-sftp
   SyslogFacility: AUTHPRIV
   UsePAM: true
   X11Forwarding: true
   PrintMotd: "yes"
   PrintLastLog: "yes"
-  Ciphers: aes128-ctr,aes192-ctr,aes256-ctr,chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com
+  Ciphers: '{{ _sshd_default_ciphers | default(''chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr'') }}'
   MACs: hmac-sha2-256,hmac-sha2-512
-  KexAlgorithms: sntrup761x25519-sha512@openssh.com,sntrup761x25519-sha512,curve25519-sha256,diffie-hellman-group-exchange-sha256
+  KexAlgorithms: '{{ _sshd_default_kex | default(''curve25519-sha256'') }}'
   PermitUserEnvironment: "no"
   MaxSessions: 10
   TCPKeepAlive: "yes"
@@ -59,3 +57,4 @@ sshd_server_group_vars: {}
 sshd_server_host_vars: {}
 sshd_server_playbook: {}
 sshd_server_match_blocks: []
+sshd_disable_socket_activation: true

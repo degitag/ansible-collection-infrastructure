@@ -1,0 +1,51 @@
+{
+  "date": "2026-10-23",
+  "scope": "General UKHD role extensions transferred to degit.infrastructure; UKHD inventory and playbooks unchanged.",
+  "roles_added": [
+    "conditional_reboot",
+    "prompt"
+  ],
+  "roles_extended": [
+    "proxy",
+    "docker",
+    "sshd",
+    "auditd",
+    "ca",
+    "nginx",
+    "sssd",
+    "users"
+  ],
+  "excluded": [
+    "PRTG",
+    "postfix_mta",
+    "user_logging",
+    "UKHD GitLab proxyserver environment file"
+  ],
+  "verification": {
+    "unit_tests": {
+      "passed": 74,
+      "includes": [
+        "real pip wheel download through authenticated local proxy",
+        "native sshd -t and sshd -T for both platform cipher lists",
+        "maintenance window and failed requirement checks",
+        "real Bash prompt behavior"
+      ]
+    },
+    "generator": "passed",
+    "yamllint": "passed",
+    "role_syntax_checks": 47,
+    "ansible_lint_profile": "production",
+    "artifact": "built, inspected and installed in isolated local collection path",
+    "sanity": [
+      "compile Python 3.12",
+      "import Python 3.12"
+    ],
+    "real_ansible_render": "passed; current production reboot policy task retains native types; second proxy rendering unchanged"
+  },
+  "not_run": {
+    "container_smoke": "Docker CLI/runtime unavailable locally; five-image smoke playbook extended for prompt and disabled reboot policy",
+    "dedicated_vms": "No dedicated test guest authorized. Timer activation, actual reboot, Docker image pulls through a deployed proxy, Linux SSH logins, SELinux and real RHEL remain unverified."
+  },
+  "delivery": "Local changes only; no commit, push, release or deployment.",
+  "preexisting_state": "701 preexisting uncommitted infrastructure paths retained; initial source hashes recorded in /tmp/degit-ukhd-extension-baseline/hashes.json. Collection version remains the prepared 2.0.0."
+}

@@ -1,23 +1,23 @@
 ---
 galaxy_info:
   author: Dominik Lenhardt
-  description: Install a graphical desktop environment on supported Linux hosts.
+  description: Install an explicitly enabled distribution-specific graphical desktop.
   license: MIT
-  min_ansible_version: '2.16'
+  min_ansible_version: '2.20'
   platforms:
-  - name: Debian
-    versions:
-    - bookworm
   - name: Ubuntu
     versions:
     - jammy
     - noble
+    - resolute
+  - name: Debian
+    versions:
+    - trixie
   - name: EL
     versions:
     - '9'
   galaxy_tags:
-  - desktop
-  - gui
   - linux
+  - system
   - infrastructure
 dependencies: []

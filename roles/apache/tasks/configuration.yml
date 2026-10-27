@@ -1,0 +1,110 @@
+---
+- name: Validate supported platform
+  ansible.builtin.assert:
+    that:
+    - ansible_facts.os_family in ["Debian", "RedHat"]
+    fail_msg: The apache role supports Debian and RedHat families only.
+
+- name: Install SELinux tooling for apache
+  ansible.builtin.package:
+    name: '{{ apache_selinux_packages }}'
+    state: present
+    policy_rc_d: "{{ 101 if ansible_facts.os_family == 'Debian' and not (apache_manage_service | bool and apache_service_state == 'started') else omit }}"
+  when:
+  - ansible_facts.os_family == "RedHat"
+  - apache_manage_selinux | bool
+  - ansible_facts.selinux is defined
+  - ansible_facts.selinux.status == "enabled"
+  become: true
+
+- name: Include tasks for install
+  ansible.builtin.include_tasks: install.yml
+  tags: apache_install
+
+- name: Include tasks for mpm
+  ansible.builtin.include_tasks: mpm.yml
+  tags: apache_mpm
+
+- name: Include tasks for mods
+  ansible.builtin.include_tasks: mods.yml
+  tags: apache_mods
+
+- name: Include tasks for conf
+  ansible.builtin.include_tasks: conf.yml
+  tags: apache_conf
+
+- name: Include tasks for default vhost
+  ansible.builtin.include_tasks: default_vhost.yml
+  tags: apache_default_vhost
+  when: not apache_remove_default_vhost
+
+- name: Remove default vhost config file
+  ansible.builtin.file:
+    path: '{{ item }}'
+    state: absent
+  loop:
+  - '{{ _apache_vhost_conf_path }}/000-default.conf'
+  - /etc/{{ _apache_package_name }}/sites-enabled/000-default.conf
+  when: apache_remove_default_vhost
+
+- name: Include tasks for vhosts
+  ansible.builtin.include_tasks: vhosts.yml
+  vars:
+    _apache_vhost: '{{ apache_vhosts_default | combine(item) }}'
+  loop: '{{ apache_vhosts }}'
+  loop_control:
+    label: Config virtual host {{ item.name }}
+  tags: apache_vhosts
+  when: apache_vhosts | length > 0
+
+- name: Override apache systemd service
+  when: apache_manage_systemd_override
+  block:
+  - name: Create systemd drop-in directory
+    ansible.builtin.file:
+      path: '{{ apache_systemd_base_path }}/{{ _apache_package_name }}.d'
+      state: directory
+      owner: root
+      group: root
+      mode: '0644'
+
+  - name: Create custom systemd unit file
+    ansible.builtin.template:
+      src: '{{ apache_systemd_unit_template }}'
+      dest: '{{ apache_systemd_base_path }}/{{ _apache_package_name }}.d/override.conf'
+      owner: root
+      group: root
+      mode: '0644'
+      force: true
+    notify:
+    - Reload apache daemon
+    - Restart apache
+- name: Manage apache ports through the firewall role
+  ansible.builtin.include_role:
+    name: degitag.infrastructure.firewall
+  vars:
+    firewall_manage_activation: false
+    firewall_rules:
+    - port: '{{ _apache_firewall_port }}'
+      protocol: tcp
+      action: allow
+      comment: Apache
+      zone: '{{ apache_firewall_zone | default("public") }}'
+  loop: '{{ (apache_ports + apache_ssl_ports + apache_gnutls_ports) | unique }}'
+  loop_control:
+    loop_var: _apache_firewall_port
+  when:
+  - apache_manage_firewall | bool
+- name: Allow apache ports in SELinux
+  community.general.seport:
+    ports: '{{ item }}'
+    proto: tcp
+    setype: '{{ apache_selinux_port_type }}'
+    state: present
+  loop: '{{ (apache_ports + apache_ssl_ports + apache_gnutls_ports) | unique }}'
+  when:
+  - ansible_facts.os_family == "RedHat"
+  - apache_manage_selinux | bool
+  - ansible_facts.selinux is defined
+  - ansible_facts.selinux.status == "enabled"
+  become: true

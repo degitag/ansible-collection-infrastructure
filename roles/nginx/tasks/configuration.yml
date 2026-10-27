@@ -1,0 +1,108 @@
+---
+- name: Validate supported platform
+  ansible.builtin.assert:
+    that:
+    - ansible_facts.os_family in ["Debian", "RedHat"]
+    fail_msg: The nginx role supports Debian and RedHat families only.
+  tags: nginx
+- name: Install SELinux tooling for nginx
+  ansible.builtin.package:
+    name: '{{ nginx_selinux_packages }}'
+    state: present
+    policy_rc_d: '{{ 101 if ansible_facts.os_family == ''Debian'' and not (nginx_manage_service | bool and nginx_service_state == ''started'') else omit }}'
+  when:
+  - ansible_facts.os_family == "RedHat"
+  - nginx_manage_selinux | bool
+  - ansible_facts.selinux is defined
+  - ansible_facts.selinux.status == "enabled"
+  become: true
+  tags: nginx
+- name: Define nginx_user.
+  ansible.builtin.set_fact:
+    nginx_user: '{{ __nginx_user }}'
+  when: nginx_user is not defined
+  tags: nginx
+- name: Setup nginx on RedHat
+  ansible.builtin.include_tasks: setup-RedHat.yml
+  when: ansible_facts.os_family == 'RedHat'
+  tags: nginx
+- name: Setup nginx on Ubuntu
+  ansible.builtin.include_tasks: setup-Ubuntu.yml
+  when: ansible_facts.distribution == 'Ubuntu'
+  tags: nginx
+- name: Setup nginx package on Debian family
+  ansible.builtin.include_tasks: setup-Debian.yml
+  when: ansible_facts.os_family == 'Debian'
+  tags: nginx
+- name: Install additional NGINX packages
+  ansible.builtin.package:
+    name: '{{ nginx_extra_packages }}'
+    state: present
+    policy_rc_d: '{{ 101 if ansible_facts.os_family == ''Debian'' and not (nginx_manage_service | bool and nginx_service_state == ''started'') else omit }}'
+  when: nginx_extra_packages | length > 0
+  become: true
+- name: Install native stream module for configured TCP or UDP proxies
+  ansible.builtin.package:
+    name: '{{ _nginx_stream_packages }}'
+    state: present
+    policy_rc_d: '{{ 101 if ansible_facts.os_family == ''Debian'' and not (nginx_manage_service | bool and nginx_service_state == ''started'') else omit }}'
+  when:
+  - nginx_manage_stream_module | bool
+  - (nginx_streams + nginx_stream_servers + nginx_stream_upstreams + nginx_stream_maps) | length > 0
+  become: true
+- name: Manage nginx vhosts
+  ansible.builtin.import_tasks: vhosts.yml
+  tags: nginx
+- name: Copy nginx configuration in place.
+  ansible.builtin.template:
+    src: '{{ nginx_conf_template }}'
+    dest: '{{ nginx_conf_file_path }}'
+    owner: root
+    group: '{{ root_group }}'
+    mode: '0644'
+    validate: '{{ nginx_validate_binary }} -t -c %s'
+  notify:
+  - Reload nginx
+  become: true
+  tags: nginx
+- name: Manage nginx ports through the firewall role
+  ansible.builtin.include_role:
+    name: degitag.infrastructure.firewall
+    apply:
+      tags: nginx
+  vars:
+    firewall_manage_activation: false
+    firewall_rules:
+    - port: '{{ _nginx_firewall_port.split(''/'')[0] }}'
+      protocol: '{{ _nginx_firewall_port.split(''/'')[1] }}'
+      action: allow
+      comment: Nginx
+      zone: '{{ nginx_firewall_zone | default("public") }}'
+  loop: '{{ nginx_firewall_ports }}'
+  loop_control:
+    loop_var: _nginx_firewall_port
+  when:
+  - nginx_manage_firewall | bool
+  tags: nginx
+- name: Allow nginx ports in SELinux
+  community.general.seport:
+    ports: '{{ item.split(''/'')[0] }}'
+    proto: '{{ item.split(''/'')[1] }}'
+    setype: '{{ nginx_selinux_port_type }}'
+    state: present
+  loop: '{{ nginx_firewall_ports }}'
+  when:
+  - ansible_facts.os_family == "RedHat"
+  - nginx_manage_selinux | bool
+  - ansible_facts.selinux is defined
+  - ansible_facts.selinux.status == "enabled"
+  become: true
+  tags: nginx
+- name: Ensure nginx service is running as configured.
+  ansible.builtin.service:
+    name: '{{ nginx_service_name | default(''nginx'') }}'
+    state: '{{ nginx_service_state }}'
+    enabled: '{{ nginx_service_enabled }}'
+  when: nginx_manage_service | bool
+  become: true
+  tags: nginx

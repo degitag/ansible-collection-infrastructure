@@ -1,0 +1,31 @@
+---
+- name: Assign explicitly trusted source networks
+  ansible.posix.firewalld:
+    source: '{{ item }}'
+    zone: trusted
+    state: enabled
+    permanent: true
+    immediate: true
+  loop: '{{ _firewall_trusted_sources }}'
+  become: true
+- name: Apply portable firewalld rules
+  ansible.posix.firewalld:
+    rich_rule: >-
+      rule{% if item.source | default('any') != 'any' or item.destination | default('any') != 'any' %} family="{{ 'ipv6' if ':' in (item.source | default('') ~ item.destination
+      | default('')) else 'ipv4' }}"{% endif %} {% if item.source | default('any') != 'any' %}source address="{{ item.source }}"{% endif %} {% if item.destination
+      | default('any') != 'any' %}destination address="{{ item.destination }}"{% endif %} port port="{{ item.port | string | replace(':', '-') }}" protocol="{{ item.protocol
+      | default('tcp') }}" {{ {'allow': 'accept', 'deny': 'drop', 'reject': 'reject'}[item.action | default('allow')] }}
+    zone: '{{ item.zone | default(firewall_zone) }}'
+    state: "{{ 'enabled' if item.state | default('present') == 'present' else 'disabled' }}"
+    permanent: true
+    immediate: true
+  loop: '{{ _firewall_rules }}'
+  become: true
+
+- name: Configure firewalld activation
+  ansible.builtin.service:
+    name: '{{ _firewall_service }}'
+    state: "{{ 'started' if firewall_enabled else 'stopped' }}"
+    enabled: '{{ firewall_enabled }}'
+  when: firewall_manage_activation | bool
+  become: true

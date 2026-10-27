@@ -1,7 +1,6 @@
 ---
 - name: Functional test for wpad with nginx
-  hosts: localhost
-  connection: local
+  hosts: all
   gather_facts: true
   become: true
   vars:
@@ -31,13 +30,12 @@
 
   - name: Apply wpad role
     ansible.builtin.import_role:
-      name: ..
+      name: degitag.infrastructure.wpad
 
   - name: Define wpad verification variables
     ansible.builtin.set_fact:
       __wpad_config_path: >-
-        {{ '/etc/nginx/sites-enabled/wpad.conf' if ansible_os_family == 'Debian'
-        else '/etc/nginx/conf.d/wpad.conf' }}
+        {{ '/etc/nginx/sites-enabled/wpad.conf' if ansible_facts.os_family == 'Debian' else '/etc/nginx/conf.d/wpad.conf' }}
       __wpad_validate_binary: /usr/sbin/nginx
       __wpad_pac_path: "{{ wpad_document_root }}/{{ wpad_pac_filename }}"
 
@@ -70,9 +68,9 @@
       that:
       - __wpad_pac_stat.stat.exists
       - __wpad_nginx_config_stat.stat.exists
-      - '(__wpad_pac_content.content | b64decode) is search("PROXY squid.example.test:3128; SOCKS socks.example.test:1080; DIRECT")'
-      - '(__wpad_pac_content.content | b64decode) is search(".example.internal")'
-      - '(__wpad_nginx_config_content.content | b64decode) is search("server_name wpad.example.test proxy.example.test;")'
-      - '(__wpad_nginx_config_content.content | b64decode) is search("location = /wpad.dat")'
-      - '(__wpad_nginx_config_content.content | b64decode) is search("default_type application/x-ns-proxy-autoconfig;")'
-      fail_msg: "The wpad role did not render the expected PAC payload or nginx site configuration."
+      - (__wpad_pac_content.content | b64decode) is search("PROXY squid.example.test:3128; SOCKS socks.example.test:1080; DIRECT")
+      - (__wpad_pac_content.content | b64decode) is search(".example.internal")
+      - (__wpad_nginx_config_content.content | b64decode) is search("server_name wpad.example.test proxy.example.test;")
+      - (__wpad_nginx_config_content.content | b64decode) is search("location = /wpad.dat")
+      - (__wpad_nginx_config_content.content | b64decode) is search("default_type application/x-ns-proxy-autoconfig;")
+      fail_msg: The wpad role did not render the expected PAC payload or nginx site configuration.

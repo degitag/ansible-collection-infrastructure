@@ -1,5 +1,0 @@
----
-multipath_packages:
-- multipath-tools
-multipath_config_file: /etc/multipath.conf
-multipath_service: multipathd

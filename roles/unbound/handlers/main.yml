@@ -1,14 +1,11 @@
 ---
 - name: Restart unbound
   ansible.builtin.service:
-    name: "{{ unbound_service_name }}"
+    name: '{{ unbound_service_name }}'
     state: restarted
   become: true
   tags: unbound
 
-- name: Reload firewalld
-  ansible.builtin.service:
-    name: firewalld
-    state: reloaded
-  become: true
-  tags: unbound
+  when:
+  - unbound_manage_service | bool
+  - unbound_service_state != 'stopped'

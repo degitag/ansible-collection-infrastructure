@@ -1,9 +1,0 @@
----
-sshd_service_name: sshd
-sshd_validate_binary: /usr/sbin/sshd
-sshd_selinux_packages:
-- policycoreutils-python-utils
-sshd_selinux_port_type: ssh_port_t
-sshd_packages_name:
-- openssh-server
-- openssh-clients

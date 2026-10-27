@@ -3,18 +3,18 @@ dnf_automatic_manage_service: true
 dnf_automatic_service_enabled: true
 dnf_automatic_service_state: started
 dnf_automatic_apply_updates: "yes"
-dnf_automatic_emit_via: "email"
-dnf_automatic_email_from: "{{ smtp_user }}"
-dnf_automatic_email_to: "{{ smtp_user }}"
-dnf_automatic_email_host: "{{ smtp_host.split(':')[0] }}"
+dnf_automatic_emit_via: email
+dnf_automatic_email_from: root@localhost
+dnf_automatic_email_to: root@localhost
+dnf_automatic_email_host: localhost
 dnf_automatic_email_tls: "yes"
-dnf_automatic_email_port: "{{ smtp_host.split(':')[1] }}"
+dnf_automatic_email_port: 25
 dnf_automatic_email_auth: login
 dnf_automatic_email_user:
 dnf_automatic_email_password:
 dnf_automatic_download_updates: "yes"
-dnf_automatic_download_updates_command: "/usr/bin/dnf-automatic-install"
-dnf_automatic_random_sleep: "1800"
+dnf_automatic_download_updates_command: /usr/bin/dnf-automatic-install
+dnf_automatic_random_sleep: '1800'
 dnf_automatic_system_package_cache: "yes"
-dnf_automatic_upgrade_type: "default"
-dnf_automatic_reboot: "when-needed"
+dnf_automatic_upgrade_type: default
+dnf_automatic_reboot: when-needed

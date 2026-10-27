@@ -1,1 +1,4 @@
 ---
+motd_description: ''
+motd_responsible: ''
+motd_remove_vendor_scripts: false

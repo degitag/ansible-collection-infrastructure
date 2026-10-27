@@ -1,17 +1,21 @@
 ---
 - name: Restart apache
   ansible.builtin.systemd:
-    name: "{{ _apache_package_name }}"
+    name: '{{ _apache_package_name }}'
     state: restarted
-  when: apache_service_state != 'stopped'
+  when:
 
+  - apache_service_state != 'stopped'
+  - apache_manage_service | bool
 - name: Reload apache
   ansible.builtin.systemd:
-    name: "{{ _apache_package_name }}"
+    name: '{{ _apache_package_name }}'
     state: reloaded
-  when: apache_service_state != 'stopped'
+  when:
 
+  - apache_service_state != 'stopped'
+  - apache_manage_service | bool
 - name: Reload apache daemon
   ansible.builtin.systemd:
-    name: "{{ _apache_package_name }}"
+    name: '{{ _apache_package_name }}'
     daemon_reload: true

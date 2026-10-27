@@ -1,0 +1,47 @@
+---
+- name: Select firewall backend
+  ansible.builtin.set_fact:
+    _firewall_backend: "{{ firewall_backend if firewall_backend != 'auto' else _firewall_platform_backend }}"
+
+- name: Validate backend and firewall policy
+  ansible.builtin.assert:
+    that:
+    - _firewall_backend == _firewall_platform_backend
+    - firewall_default_incoming_policy in ['allow', 'deny', 'reject']
+    - firewall_service_state in ['started', 'stopped']
+    fail_msg: Use UFW on Debian/Ubuntu and firewalld on Rocky/RHEL.
+
+- name: Compile and validate portable firewall rules
+  ansible.builtin.set_fact:
+    _firewall_rules: '{{ firewall_rules | degitag.infrastructure.firewall_compile(_firewall_backend, firewall_zone) }}'
+    _firewall_trusted_sources: '{{ firewall_trusted_sources | degitag.infrastructure.firewall_networks }}'
+- name: Validate portable rules before changing the host
+  ansible.builtin.assert:
+    that:
+    - item.port is defined
+    - item.port | string is match('^[0-9]+([:-][0-9]+)?$')
+    - item.protocol | default('tcp') in ['tcp', 'udp']
+    - item.action | default('allow') in ['allow', 'deny', 'reject']
+    - item.state | default('present') in ['present', 'absent']
+    - item.direction | default('in') == 'in'
+    - _firewall_backend == 'ufw' or item.interface is not defined
+    fail_msg: Rules require a numeric port or range, tcp/udp and an inbound allow/deny/reject action.
+  loop: '{{ _firewall_rules }}'
+
+- name: Install firewall packages
+  ansible.builtin.package:
+    name: '{{ _firewall_packages }}'
+    state: present
+    policy_rc_d: "{{ 101 if ansible_facts.os_family == 'Debian' and not (firewall_manage_service | bool and firewall_service_state == 'started') else omit }}"
+  become: true
+
+- name: Manage firewall service
+  ansible.builtin.service:
+    name: '{{ _firewall_service }}'
+    state: '{{ firewall_service_state }}'
+    enabled: '{{ firewall_service_enabled }}'
+  when: firewall_manage_service | bool
+  become: true
+
+- name: Configure selected firewall backend
+  ansible.builtin.include_tasks: '{{ _firewall_backend }}.yml'

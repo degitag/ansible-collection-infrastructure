@@ -4,20 +4,19 @@
     that:
     - (sftp_server_user.home_subdirectory | default(sftp_server_home_subdirectory)) in (sftp_server_user.directories | default(sftp_server_default_directories))
     fail_msg: >-
-      The home subdirectory for {{ sftp_server_user.name }} must exist in the directory list.
-      Set `home_subdirectory` to one of `directories` or include it explicitly.
+      The home subdirectory for {{ sftp_server_user.name }} must exist in the directory list. Set `home_subdirectory` to one of `directories` or include it explicitly.
   tags: sftp_server
 
 - name: Ensure SFTP account exists
   ansible.builtin.user:
-    name: "{{ sftp_server_user.name }}"
-    comment: "{{ sftp_server_user.comment | default(omit) }}"
-    uid: "{{ sftp_server_user.uid | default(omit) }}"
-    group: "{{ sftp_server_user.group | default(sftp_server_group) }}"
-    groups: "{{ sftp_server_user.groups | default(omit) }}"
-    append: "{{ sftp_server_user.append_groups | default(false) }}"
-    shell: "{{ sftp_server_user.shell | default(sftp_server_default_shell or sftp_server_nologin_shell) }}"
-    home: "/{{ sftp_server_user.home_subdirectory | default(sftp_server_home_subdirectory) }}"
+    name: '{{ sftp_server_user.name }}'
+    comment: '{{ sftp_server_user.comment | default(omit) }}'
+    uid: '{{ sftp_server_user.uid | default(omit) }}'
+    group: '{{ sftp_server_user.group | default(sftp_server_group) }}'
+    groups: '{{ sftp_server_user.groups | default(omit) }}'
+    append: '{{ sftp_server_user.append_groups | default(false) }}'
+    shell: '{{ sftp_server_user.shell | default(sftp_server_default_shell or sftp_server_nologin_shell) }}'
+    home: /{{ sftp_server_user.home_subdirectory | default(sftp_server_home_subdirectory) }}
     create_home: false
     state: present
     password: >-
@@ -25,38 +24,38 @@
         omit if sftp_server_user.password is not defined else
         (sftp_server_user.password if (sftp_server_user.password_hashed | default(false)) else (sftp_server_user.password | password_hash('sha512')))
       }}
-    password_lock: "{{ sftp_server_user.password_lock | default(sftp_server_default_password_lock) }}"
+    password_lock: '{{ sftp_server_user.password_lock | default(sftp_server_default_password_lock) }}'
     update_password: "{{ sftp_server_user.update_password | default('on_create') }}"
   become: true
   tags: sftp_server
 
 - name: Ensure chroot root exists
   ansible.builtin.file:
-    path: "{{ sftp_server_base_path }}/{{ sftp_server_user.name }}"
+    path: '{{ sftp_server_base_path }}/{{ sftp_server_user.name }}'
     state: directory
     owner: root
     group: root
-    mode: "0755"
+    mode: '0755'
   become: true
   tags: sftp_server
 
 - name: Ensure user-accessible SFTP directories exist
   ansible.builtin.file:
-    path: "{{ sftp_server_base_path }}/{{ sftp_server_user.name }}/{{ item }}"
+    path: '{{ sftp_server_base_path }}/{{ sftp_server_user.name }}/{{ item }}'
     state: directory
-    owner: "{{ sftp_server_user.name }}"
-    group: "{{ sftp_server_user.group | default(sftp_server_group) }}"
-    mode: "{{ sftp_server_user.directory_mode | default(sftp_server_directory_mode) }}"
-  loop: "{{ sftp_server_user.directories | default(sftp_server_default_directories) }}"
+    owner: '{{ sftp_server_user.name }}'
+    group: '{{ sftp_server_user.group | default(sftp_server_group) }}'
+    mode: '{{ sftp_server_user.directory_mode | default(sftp_server_directory_mode) }}'
+  loop: '{{ sftp_server_user.directories | default(sftp_server_default_directories) }}'
   become: true
   tags: sftp_server
 
-- name: Install authorized keys for SFTP account
-  ansible.posix.authorized_key:
-    user: "{{ sftp_server_user.name }}"
-    key: "{{ item }}"
-    state: present
-  loop: "{{ sftp_server_user.authorized_keys | default([]) }}"
+- name: Install isolated root-owned keys for the SFTP account
+  ansible.builtin.copy:
+    content: "{{ (sftp_server_user.authorized_keys | default([]) | unique | join('\\n')) ~ '\\n' }}"
+    dest: '{{ sftp_server_authorized_keys_dir }}/{{ sftp_server_user.name }}'
+    owner: root
+    group: root
+    mode: '0644'
+  when: sftp_server_user.authorized_keys is defined
   become: true
-  when: (sftp_server_user.authorized_keys | default([])) | length > 0
-  tags: sftp_server

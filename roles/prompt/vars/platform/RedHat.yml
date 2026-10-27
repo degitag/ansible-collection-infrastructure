@@ -1,0 +1,9 @@
+---
+_prompt_profile_dir: /etc/profile.d
+_prompt_architectures:
+  x86_64: amd64
+  aarch64: arm64
+_prompt_yq_path: /usr/local/bin/yq
+_prompt_packages:
+- bash
+- git

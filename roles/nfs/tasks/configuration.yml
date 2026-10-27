@@ -1,0 +1,18 @@
+---
+- name: Validate NFS variables
+  ansible.builtin.include_tasks: validate_variables.yml
+
+- name: Install platform-specific NFS packages
+  ansible.builtin.package:
+    name: '{{ _nfs_client_packages + (_nfs_server_packages if nfs_exports | length > 0 or nfs_manage_service | bool else []) }}'
+    state: present
+    policy_rc_d: "{{ 101 if ansible_facts.os_family == 'Debian' and not (nfs_manage_service | bool and nfs_service_state == 'started') else omit }}"
+  become: true
+- name: Configure NFS server
+  ansible.builtin.import_tasks: server.yml
+  when:
+  - (nfs_exports | length > 0) or (nfs_manage_service | bool)
+
+- name: Configure NFS client mounts
+  ansible.builtin.import_tasks: client.yml
+  when: nfs_mounts

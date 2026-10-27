@@ -12,7 +12,7 @@ argument_specs:
         type: bool
       nfs_service_enabled:
         description:
-        - Controls `nfs_service_enabled` for the `nfs` role.
+        - Enable the NFS server on boot when exports are configured.
         required: false
         type: bool
       nfs_service_state:

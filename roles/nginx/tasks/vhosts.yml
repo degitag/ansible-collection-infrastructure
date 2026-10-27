@@ -1,7 +1,7 @@
 ---
 - name: Remove default nginx vhost config file (if configured).
   ansible.builtin.file:
-    path: "{{ nginx_default_vhost_path }}"
+    path: '{{ nginx_default_vhost_path }}'
     state: absent
   when: nginx_remove_default_vhost | bool
   notify: Restart nginx
@@ -10,23 +10,23 @@
 
 - name: Ensure nginx_vhost_path exists.
   ansible.builtin.file:
-    path: "{{ nginx_vhost_path }}"
+    path: '{{ nginx_vhost_path }}'
     state: directory
-    mode: "0755"
+    mode: '0755'
   notify: Reload nginx
   become: true
   tags: nginx
 
 - name: Add managed vhost config files.
   ansible.builtin.template:
-    src: "{{ item.template|default(nginx_vhost_template) }}"
+    src: '{{ item.template|default(nginx_vhost_template) }}'
     dest: "{{ nginx_vhost_path }}/{{ item.filename|default(item.server_name.split(' ')[0] ~ '.conf') }}"
     force: true
     owner: root
-    group: "{{ root_group }}"
-    mode: "0644"
+    group: '{{ root_group }}'
+    mode: '0644'
   when: item.state|default('present') != 'absent'
-  with_items: "{{ nginx_vhosts }}"
+  with_items: '{{ nginx_vhosts }}'
   notify: Reload nginx
   become: true
   tags:
@@ -38,7 +38,7 @@
     path: "{{ nginx_vhost_path }}/{{ item.filename|default(item.server_name.split(' ')[0] ~ '.conf') }}"
     state: absent
   when: item.state|default('present') == 'absent'
-  with_items: "{{ nginx_vhosts }}"
+  with_items: '{{ nginx_vhosts }}'
   notify: Reload nginx
   become: true
   tags:
@@ -47,7 +47,7 @@
 
 - name: Remove legacy vhosts.conf file.
   ansible.builtin.file:
-    path: "{{ nginx_vhost_path }}/vhosts.conf"
+    path: '{{ nginx_vhost_path }}/vhosts.conf'
     state: absent
   notify: Reload nginx
   become: true

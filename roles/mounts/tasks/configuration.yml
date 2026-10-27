@@ -1,0 +1,23 @@
+---
+- name: Combine mounts
+  ansible.builtin.set_fact:
+    mounts: >-
+      {{
+        (mounts_defaults | default([])) +
+        (mounts_group_vars | default([])) +
+        (mounts_host_vars | default([])) +
+        (mounts_playbook | default([]))
+      | unique }}
+  tags: mounts
+
+- name: Mount the defined volumes
+  ansible.posix.mount:
+    path: '{{ item.mount }}'
+    src: '{{ item.src }}'
+    fstype: '{{ item.fstype }}'
+    opts: "{{ item.opts | default('defaults') }}"
+    state: mounted
+  loop: '{{ mounts }}'
+  notify: Reload systemd
+  become: true
+  tags: mounts

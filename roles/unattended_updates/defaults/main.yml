@@ -51,7 +51,7 @@ unattended_updates_mail_only_on_error: true
 #    "always", "only-on-error" or "on-change"
 #  If this is not set, then any legacy MailOnlyOnError (boolean) value
 #  is used to chose between "only-on-error" and "on-change"
-unattended_updates_mail_report: "only-on-error"
+unattended_updates_mail_report: only-on-error
 
 # Unattended-Upgrade::Remove-Unused-Dependencies
 #  Do automatic removal of all unused dependencies after the upgrade
@@ -91,7 +91,7 @@ unattended_updates_syslog_enable: true
 #  Write events to the specified syslog facility, or the daemon facility if
 #  not specified. Requires the Unattended-Upgrade::SyslogEnable option to be
 #  set to true.
-unattended_updates_syslog_facility: "updates"
+unattended_updates_syslog_facility: updates
 
 ### APT::Periodic configuration
 # Snatched from /usr/lib/apt/apt.systemd.daily
@@ -102,8 +102,7 @@ unattended_updates_update_package_list: 1
 
 # APT::Periodic::Download-Upgradeable-Packages "0";
 # - Do "apt-get upgrade --download-only" every n-days (0=disable)
-unattended_updates_download_upgradeable: null
-
+unattended_updates_download_upgradeable:
 # APT::Periodic::AutocleanInterval "0";
 # - Do "apt-get autoclean" every n-days (0=disable)
 unattended_updates_autoclean_interval: 7
@@ -130,8 +129,7 @@ unattended_updates_verbose: 1
 # everyone running their updates all at the same time
 # Kept undefined to allow default (1800)
 unattended_updates_random_sleep: 1800
-unattended_updates_update_days: null
-
+unattended_updates_update_days:
 # Dpkg::Options
 # Provide dpkg options that take effect during unattended upgrades.
 # By default no flags are appended. Configuration file changes can
@@ -143,7 +141,6 @@ unattended_updates_dpkg_options: []
 # unattended_dpkg_options:
 #   - "--force-confdef"
 #   - "--force-confold"
-
 
 # Use apt bandwidth limit feature, this example limits the download speed to 70kb/sec
 unattended_updates_dl_limit: 0

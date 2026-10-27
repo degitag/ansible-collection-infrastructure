@@ -1,0 +1,17 @@
+#!/bin/sh
+# Managed by degitag.infrastructure.motd
+printf '\n  Welcome to %s (%s)\n' {{ (ansible_facts.distribution ~ ' ' ~ ansible_facts.distribution_version) | quote }} "$(uname -m)"
+printf '    FQDN: %s\n' {{ (ansible_facts.fqdn | default(inventory_hostname)) | quote }}
+printf '    Type: %s\n' {{ (ansible_facts.virtualization_type | default('unknown')) | quote }}
+printf '    Kernel: %s\n' "$(uname -sr)"
+printf '    CPUs: %s\n' "$(getconf _NPROCESSORS_ONLN)"
+printf '    RAM: %s GiB\n' "$(awk '/MemTotal/ {printf "%.1f", $2 / 1024 / 1024}' /proc/meminfo)"
+printf '    IPv4: %s\n' {{ (ansible_facts.default_ipv4.address | default('-')) | quote }}
+printf '    IPv6: %s\n' {{ (ansible_facts.default_ipv6.address | default('-')) | quote }}
+{% if motd_description %}
+printf '    Description: %s\n' {{ motd_description | quote }}
+{% endif %}
+{% if motd_responsible %}
+printf '    Responsible: %s\n' {{ motd_responsible | quote }}
+{% endif %}
+printf '    Last configuration change: %s\n\n' "$(date -r {{ _motd_script_path | quote }} '+%F %T %Z')"

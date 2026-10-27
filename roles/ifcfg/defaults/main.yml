@@ -1,6 +1,0 @@
----
-ifcfg_interfaces:
-- device: "{{ ansible_default_ipv4.interface }}"
-  bootproto: dhcp
-  onboot: "yes"
-  macaddr: "{{ ansible_default_ipv4.macaddress }}"

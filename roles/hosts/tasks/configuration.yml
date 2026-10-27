@@ -1,0 +1,40 @@
+---
+- name: Define desired hostname
+  ansible.builtin.set_fact:
+    __hosts_desired_hostname: "{{ hosts_hostname }}{{ '.' ~ hosts_domain if hosts_domain | length > 0 else '' }}"
+  tags: hosts
+
+- name: Check current hostname
+  ansible.builtin.command:
+    cmd: hostname
+  register: __hosts_current_hostname
+  changed_when: false
+  tags: hosts
+
+- name: Configure /etc/hostname
+  ansible.builtin.copy:
+    content: "{{ __hosts_desired_hostname }}\n"
+    dest: /etc/hostname
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  tags: hosts
+
+- name: Configure runtime hostname
+  ansible.builtin.command:
+    cmd: hostname {{ __hosts_desired_hostname }}
+  when: __hosts_current_hostname.stdout | trim != __hosts_desired_hostname
+  changed_when: true
+  become: true
+  tags: hosts
+
+- name: Configure /etc/hosts
+  ansible.builtin.template:
+    src: hosts.j2
+    dest: /etc/hosts
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  tags: hosts

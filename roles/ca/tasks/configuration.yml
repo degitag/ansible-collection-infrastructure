@@ -1,0 +1,52 @@
+---
+- name: Resolve certificate sources on the controller
+  ansible.builtin.set_fact:
+    _ca_certificates: '{{ query(''ansible.builtin.fileglob'', ca_source_path) }}'
+- name: Require matching certificate sources
+  ansible.builtin.assert:
+    that:
+    - _ca_certificates | length > 0
+    fail_msg: No certificates matched ca_source_path.
+  when: ca_require_certificates | bool
+- name: Ensure package is installed
+  ansible.builtin.package:
+    name: '{{ ca_package }}'
+    state: present
+  become: true
+  tags: ca
+- name: Ensure custom trust directory exists
+  ansible.builtin.file:
+    path: '{{ ca_path }}'
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+- name: Copy certificates
+  ansible.builtin.copy:
+    src: '{{ item }}'
+    dest: '{{ ca_path }}/'
+    mode: '0644'
+  register: __ca_copy
+  notify: Update truststore
+  become: true
+  tags: ca
+  loop: '{{ _ca_certificates }}'
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers
+  become: true
+  tags: ca
+- name: Verify installed certificates against the native system trust bundle
+  ansible.builtin.command:
+    argv:
+    - '{{ _ca_openssl_binary }}'
+    - verify
+    - -CAfile
+    - '{{ _ca_trust_bundle }}'
+    - '{{ ca_path }}/{{ item | basename }}'
+  loop: '{{ _ca_certificates }}'
+  changed_when: false
+  when:
+  - ca_verify_certificates | bool
+  - not ansible_check_mode
+  become: true

@@ -2,6 +2,7 @@
 
 {% for user in sftp_server_users if (user.state | default('present')) != 'absent' and ((user.read_only | default(false)) or ((user.internal_sftp_options | default([])) | length > 0) or (user.allow_password_auth is defined) or (user.allow_public_key_auth is defined)) %}
 Match User {{ user.name }}
+    AuthorizedKeysFile {{ sftp_server_authorized_keys_dir }}/%u
     ChrootDirectory {{ sftp_server_base_path }}/{{ user.name }}
     ForceCommand internal-sftp{% set user_sftp_options = [] %}{% if user.read_only | default(false) %}{% set _ = user_sftp_options.append('-R') %}{% endif %}{% for option in user.internal_sftp_options | default([]) %}{% set _ = user_sftp_options.append(option) %}{% endfor %}{% if user_sftp_options | length > 0 %} {{ user_sftp_options | join(' ') }}{% elif sftp_server_internal_sftp_options | length > 0 %} {{ sftp_server_internal_sftp_options | join(' ') }}{% endif %}
     PasswordAuthentication {{ 'yes' if (user.allow_password_auth | default(sftp_server_allow_password_auth)) else 'no' }}
@@ -13,6 +14,7 @@ Match User {{ user.name }}
 
 {% endfor %}
 Match Group {{ sftp_server_group }}
+    AuthorizedKeysFile {{ sftp_server_authorized_keys_dir }}/%u
     ChrootDirectory {{ sftp_server_base_path }}/%u
     ForceCommand internal-sftp{% if sftp_server_internal_sftp_options | length > 0 %} {{ sftp_server_internal_sftp_options | join(' ') }}{% endif %}
     PasswordAuthentication {{ 'yes' if sftp_server_allow_password_auth else 'no' }}

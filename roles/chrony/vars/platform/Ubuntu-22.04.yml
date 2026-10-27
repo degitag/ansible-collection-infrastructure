@@ -1,0 +1,4 @@
+---
+chrony_package_name:
+- chrony
+- util-linux

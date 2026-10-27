@@ -1,4 +1,0 @@
----
-k3s_extra_interfaces: []
-k3s_network_config_path: /etc/network/interfaces.d/k3s-extra
-

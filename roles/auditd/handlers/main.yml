@@ -1,7 +1,25 @@
 ---
-- name: Restart auditd
+- name: Restart auditd on Debian
+  listen: Restart auditd
   ansible.builtin.service:
-    name: auditd
+    name: '{{ _auditd_service_name }}'
     state: restarted
+  when:
+  - ansible_facts.os_family == 'Debian'
+  - auditd_manage_service | bool
+  - auditd_service_state == 'started'
+  - auditd_service_state != 'stopped'
   become: true
-  tags: auditd
+- name: Restart auditd through the EL9 service interface
+  listen: Restart auditd
+  ansible.builtin.command:
+    argv:
+    - '{{ _auditd_service_binary }}'
+    - '{{ _auditd_service_name }}'
+    - restart
+  changed_when: true
+  when:
+  - ansible_facts.os_family == 'RedHat'
+  - auditd_manage_service | bool
+  - auditd_service_state == 'started'
+  become: true

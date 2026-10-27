@@ -1,15 +1,20 @@
 ---
+- name: Remove isolated keys for an absent SFTP account
+  ansible.builtin.file:
+    path: '{{ sftp_server_authorized_keys_dir }}/{{ sftp_server_user.name }}'
+    state: absent
+  become: true
 - name: Remove SFTP account
   ansible.builtin.user:
-    name: "{{ sftp_server_user.name }}"
+    name: '{{ sftp_server_user.name }}'
     state: absent
-    remove: "{{ sftp_server_remove_home_on_absent }}"
+    remove: '{{ sftp_server_remove_home_on_absent }}'
   become: true
   tags: sftp_server
 
 - name: Remove SFTP chroot directory
   ansible.builtin.file:
-    path: "{{ sftp_server_base_path }}/{{ sftp_server_user.name }}"
+    path: '{{ sftp_server_base_path }}/{{ sftp_server_user.name }}'
     state: absent
   become: true
   when: sftp_server_remove_chroot_on_absent | bool

@@ -1,7 +1,0 @@
----
-- name: Reload nmcli
-  ansible.builtin.command:
-    cmd: nmcli connection reload
-  become: true
-  changed_when: false
-  tags: nmcli

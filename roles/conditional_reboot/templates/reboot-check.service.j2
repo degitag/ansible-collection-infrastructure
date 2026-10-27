@@ -1,0 +1,9 @@
+{{ ansible_managed | comment }}
+[Unit]
+Description=Reboot only when required within the configured maintenance window
+[Service]
+Type=oneshot
+ExecStart={{ _conditional_reboot_script }} --config {{ _conditional_reboot_config }}
+User=root
+Group=root
+UMask=0077

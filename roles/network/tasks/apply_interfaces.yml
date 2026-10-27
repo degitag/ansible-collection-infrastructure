@@ -1,0 +1,22 @@
+---
+- name: Reconfigure declared ifupdown interfaces
+  ansible.builtin.shell: "ifdown --force {{ item.name | quote }} || true\nifup --force {{ item.name | quote }}\n"
+  loop: '{{ network_interfaces }}'
+  async: 60
+  poll: 0
+  register: _network_apply_jobs
+  changed_when: true
+  become: true
+- name: Wait for the management connection after network activation
+  ansible.builtin.wait_for_connection:
+    delay: 2
+    timeout: 60
+- name: Verify interface activation completed
+  ansible.builtin.async_status:
+    jid: '{{ item.ansible_job_id }}'
+  loop: '{{ _network_apply_jobs.results }}'
+  register: _network_apply_status
+  until: _network_apply_status.finished
+  retries: 12
+  delay: 2
+  become: true

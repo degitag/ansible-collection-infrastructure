@@ -1,33 +1,7 @@
 ---
-- name: Gather operating system variables
-  ansible.builtin.include_vars: "{{ item }}"
-  with_first_found:
-  - "{{ ansible_distribution | lower }}-{{ ansible_distribution_version | lower }}.yml"
-  - "{{ ansible_distribution | lower }}-{{ ansible_distribution_major_version | lower }}.yml"
-  - "{{ ansible_distribution_file_variety | lower }}-{{ ansible_distribution_major_version | lower }}.yml"
-  - "{{ ansible_os_family | lower }}-{{ ansible_distribution_major_version | lower }}.yml"
-  - "{{ ansible_distribution | lower }}.yml"
-  - "{{ ansible_os_family | lower }}-{{ ansible_distribution_version.split('.')[0] }}.yml"
-  - "{{ ansible_os_family | lower }}.yml"
-  when: not ansible_virtualization_type == 'lxc'
+- name: Prepare facts and platform variables
+  ansible.builtin.import_tasks: preflight.yml
+  tags: always
+- name: Apply qemu_guest_agent configuration
+  ansible.builtin.import_tasks: configuration.yml
   tags: qemu_guest_agent
-
-- name: Install package
-  ansible.builtin.package:
-    name: "{{ qemu_guest_agent_packages }}"
-    state: present
-  when: not ansible_virtualization_type == 'lxc'
-  become: true
-  tags: qemu-guest-agent
-
-- name: Start and enable service
-  ansible.builtin.service:
-    name: "{{ qemu_guest_agent_service }}"
-    state: "{{ qemu_guest_agent_service_state }}"
-    enabled: "{{ qemu_guest_agent_service_enabled }}"
-  when:
-  - qemu_guest_agent_service is defined
-  - qemu_guest_agent_manage_service | bool
-  - not ansible_virtualization_type == 'lxc'
-  become: true
-  tags: qemu-guest-agent

@@ -1,0 +1,55 @@
+---
+argument_specs:
+  main:
+    short_description: Entry point for the conditional_reboot role.
+    description:
+    - Validate variables for the `conditional_reboot` role.
+    options:
+      conditional_reboot_enabled:
+        description:
+        - Controls `conditional_reboot_enabled` for the `conditional_reboot` role.
+        required: false
+        type: bool
+      conditional_reboot_manage_service:
+        description:
+        - Controls `conditional_reboot_manage_service` for the `conditional_reboot` role.
+        required: false
+        type: bool
+      conditional_reboot_time:
+        description:
+        - Controls `conditional_reboot_time` for the `conditional_reboot` role.
+        required: false
+        type: dict
+        options:
+          hour:
+            type: int
+            required: true
+          minute:
+            type: int
+            required: true
+      conditional_reboot_day_filter_enabled:
+        description:
+        - Controls `conditional_reboot_day_filter_enabled` for the `conditional_reboot` role.
+        required: false
+        type: bool
+      conditional_reboot_day_of_week:
+        description:
+        - Controls `conditional_reboot_day_of_week` for the `conditional_reboot` role.
+        required: false
+        type: int
+      conditional_reboot_day_of_month_range:
+        description:
+        - Controls `conditional_reboot_day_of_month_range` for the `conditional_reboot` role.
+        required: false
+        type: list
+        elements: int
+      conditional_reboot_window_minutes:
+        description:
+        - Controls `conditional_reboot_window_minutes` for the `conditional_reboot` role.
+        required: false
+        type: int
+      conditional_reboot_log_path:
+        description:
+        - Controls `conditional_reboot_log_path` for the `conditional_reboot` role.
+        required: false
+        type: str

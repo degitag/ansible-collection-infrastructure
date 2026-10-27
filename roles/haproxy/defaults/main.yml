@@ -2,8 +2,8 @@
 haproxy_package_name: haproxy
 haproxy_service_name: haproxy
 haproxy_manage_service: true
-haproxy_service_enabled: true
-haproxy_service_state: started
+haproxy_service_enabled: '{{ (haproxy_frontends_list | length > 0) or (haproxy_listens_list | length > 0) }}'
+haproxy_service_state: "{{ 'started' if ((haproxy_frontends_list | length > 0) or (haproxy_listens_list | length > 0)) else 'stopped' }}"
 haproxy_server_user: haproxy
 haproxy_server_group: haproxy
 haproxy_server_fqdns: []
@@ -16,7 +16,7 @@ haproxy_manage_selinux: true
 haproxy_firewall_ports:
 - 80/tcp
 - 443/tcp
-haproxy_selinux_ports: "{{ haproxy_firewall_ports }}"
+haproxy_selinux_ports: '{{ haproxy_firewall_ports }}'
 haproxy_frontends_list: []
 haproxy_backends_list: []
 haproxy_listens_list: []
@@ -25,8 +25,8 @@ haproxy_global_config:
   log:
   - /dev/log local0
   - /dev/log local1 notice
-  user: "{{ haproxy_server_user }}"
-  group: "{{ haproxy_server_group }}"
+  user: '{{ haproxy_server_user }}'
+  group: '{{ haproxy_server_group }}'
   daemon: true
 haproxy_defaults_config:
   log: global

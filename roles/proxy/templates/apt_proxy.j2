@@ -1,8 +1,8 @@
 {{ ansible_managed | comment }}
 
-{% if proxy_env.http_proxy is defined and proxy_env.http_proxy != '' %}
-Acquire::http::Proxy "{{ proxy_env.http_proxy }}";
+{% if proxy_environment.http_proxy is defined and proxy_environment.http_proxy != '' %}
+Acquire::http::Proxy "{{ proxy_environment.http_proxy }}";
 {% endif %}
-{% if proxy_env.https_proxy is defined and proxy_env.https_proxy != '' %}
-Acquire::https::Proxy "{{ proxy_env.https_proxy }}";
+{% if proxy_environment.https_proxy is defined and proxy_environment.https_proxy != '' %}
+Acquire::https::Proxy "{{ proxy_environment.https_proxy }}";
 {% endif %}

@@ -1,0 +1,52 @@
+---
+- name: Select network backend
+  ansible.builtin.set_fact:
+    _network_backend: "{{ network_backend if network_backend != 'auto' else _network_platform_backend }}"
+
+- name: Validate backend selection
+  ansible.builtin.assert:
+    that:
+    - _network_backend in ['netplan', 'interfaces', 'nmcli']
+    - _network_backend == _network_platform_backend or network_allow_backend_migration | bool
+    - network_profile_name is match('^[a-z][a-z0-9_-]{0,31}$')
+    fail_msg: Backend migration requires network_allow_backend_migration=true and an out-of-band recovery path.
+
+- name: Compile portable interface definitions
+  ansible.builtin.set_fact:
+    _network_compiled: '{{ network_interfaces | degitag.infrastructure.network_compile(_network_backend) }}'
+
+- name: Configure network when interfaces are declared
+  when: network_interfaces | length > 0
+  block:
+  - name: Inspect running network managers
+    ansible.builtin.service_facts:
+  - name: Reject concurrent network managers
+    ansible.builtin.assert:
+      that:
+      - >-
+        network_allow_backend_migration | bool or (_network_backend == 'nmcli' and ansible_facts.services.get('systemd-networkd.service', {}).get('state', '') !=
+        'running' and ansible_facts.services.get('networking.service', {}).get('state', '') != 'running') or (_network_backend != 'nmcli' and ansible_facts.services.get('NetworkManager.service',
+        {}).get('state', '') != 'running')
+      fail_msg: Another network manager is running. Plan migration explicitly before managing interfaces.
+
+
+  - name: Install network backend packages
+    ansible.builtin.package:
+      name: '{{ _network_backend_packages[_network_backend] }}'
+      state: present
+      policy_rc_d: "{{ 101 if ansible_facts.os_family == 'Debian' and not (network_manage_service | bool) else omit }}"
+    become: true
+
+  - name: Inspect current interface state for interrupted-run recovery
+    ansible.builtin.command:
+      argv:
+      - /usr/sbin/ip
+      - -json
+      - address
+      - show
+    register: _network_runtime
+    changed_when: false
+    check_mode: false
+    become: true
+  - name: Configure native backend
+    ansible.builtin.include_tasks: '{{ _network_backend }}.yml'

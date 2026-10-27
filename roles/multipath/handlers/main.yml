@@ -5,3 +5,6 @@
     state: restarted
   become: true
   tags: multipath
+  when:
+  - multipath_manage_service | bool
+  - multipath_service_state != 'stopped'

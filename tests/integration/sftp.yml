@@ -1,0 +1,26 @@
+---
+- name: Validate real isolated SFTP access
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    sftp_server_users:
+    - name: degitsftp
+      authorized_keys:
+      - "{{ lookup('file', lookup('env', 'SFTP_TEST_PUBLIC_KEY_FILE') | default('~/.ssh/id_ed25519.pub', true)) }}"
+    - name: degitsftpother
+      authorized_keys: []
+  roles:
+  - role: degitag.infrastructure.sftp_server
+  tasks:
+  - name: Apply validated SSH handlers
+    ansible.builtin.meta: flush_handlers
+  - name: Verify effective SFTP account confinement
+    ansible.builtin.command: /usr/sbin/sshd -T -C user=degitsftp,host=localhost,addr=127.0.0.1
+    register: _sftp_effective
+    changed_when: false
+  - name: Require per-user key lookup and chroot
+    ansible.builtin.assert:
+      that:
+      - "'authorizedkeysfile /etc/ssh/authorized_keys/%u' in _sftp_effective.stdout"
+      - "'chrootdirectory /srv/sftp/%u' in _sftp_effective.stdout"

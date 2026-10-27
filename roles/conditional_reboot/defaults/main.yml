@@ -1,0 +1,13 @@
+---
+conditional_reboot_enabled: false
+conditional_reboot_manage_service: true
+conditional_reboot_time:
+  hour: 4
+  minute: 0
+conditional_reboot_day_filter_enabled: true
+conditional_reboot_day_of_week: 3
+conditional_reboot_day_of_month_range:
+- 1
+- 7
+conditional_reboot_window_minutes: 15
+conditional_reboot_log_path: /var/log/conditional_reboot.log

@@ -1,7 +1,6 @@
 ---
 - name: Container smoke test for CI-safe roles
-  hosts: localhost
-  connection: local
+  hosts: all
   gather_facts: true
   vars:
     smoke_packages_install_map:
@@ -12,13 +11,10 @@
       RedHat:
       - ca-certificates
       - sudo
-    packages_defaults_install: "{{ smoke_packages_install_map[ansible_os_family] | default(['sudo']) }}"
+    packages_defaults_install: '{{ smoke_packages_install_map[ansible_os_family] | default([''sudo'']) }}'
     packages_defaults_install_epel: []
     packages_defaults_remove: []
-    proxy_env:
-      http_proxy: http://proxy.example.invalid:3128
-      https_proxy: http://proxy.example.invalid:3128
-      no_proxy: localhost,127.0.0.1,::1
+    proxy_env: {}
     msmtp_auth: "off"
     msmtp_tls: "off"
     msmtp_tls_starttls: "off"
@@ -48,90 +44,76 @@
       - archive
       home_subdirectory: inbox
       read_only: true
-
+    resolvconf_manage_config: true
+    resolvconf_unsafe_writes: true
+    conditional_reboot_manage_service: false
+    conditional_reboot_log_path: ''
   tasks:
   - name: Apply baseline package role
     ansible.builtin.import_role:
-      name: onkeldom.default_server.packages
-
+      name: degitag.infrastructure.packages
   - name: Apply CA role
     ansible.builtin.import_role:
-      name: onkeldom.default_server.ca
-
+      name: degitag.infrastructure.ca
   - name: Apply MOTD role
     ansible.builtin.import_role:
-      name: onkeldom.default_server.motd
-
+      name: degitag.infrastructure.motd
   - name: Apply users role
     ansible.builtin.import_role:
-      name: onkeldom.default_server.users
-
+      name: degitag.infrastructure.users
   - name: Apply msmtp role on Debian family
     ansible.builtin.import_role:
-      name: onkeldom.default_server.msmtp
+      name: degitag.infrastructure.msmtp
     when: ansible_os_family == "Debian"
-
-  - name: Apply proxy role
-    ansible.builtin.import_role:
-      name: onkeldom.default_server.proxy
-
   - name: Apply resolvconf role
     ansible.builtin.import_role:
-      name: onkeldom.default_server.resolvconf
-
+      name: degitag.infrastructure.resolvconf
   - name: Apply sftp_server role
     ansible.builtin.import_role:
-      name: onkeldom.default_server.sftp_server
-
+      name: degitag.infrastructure.sftp_server
+  - name: Apply proxy role
+    ansible.builtin.import_role:
+      name: degitag.infrastructure.proxy
   - name: Check proxy environment file
     ansible.builtin.stat:
       path: /etc/environment
     register: __smoke_environment
-
   - name: Check sudoers drop-in for CI user
     ansible.builtin.stat:
       path: /etc/sudoers.d/user_ansibleci
     register: __smoke_sudoers
-
   - name: Check resolver configuration
     ansible.builtin.stat:
       path: /etc/resolv.conf
     register: __smoke_resolv
-
   - name: Check msmtp configuration on Debian family
     ansible.builtin.stat:
       path: /etc/msmtprc
     register: __smoke_msmtp
     when: ansible_os_family == "Debian"
-
   - name: Check SFTP chroot directory
     ansible.builtin.stat:
       path: /srv/sftp/sftpci
     register: __smoke_sftp_chroot
-
   - name: Check SFTP user data directory
     ansible.builtin.stat:
       path: /srv/sftp/sftpci/inbox
     register: __smoke_sftp_home
-
   - name: Check SFTP sshd match configuration
     ansible.builtin.stat:
       path: /etc/ssh/sshd_config.d/99-sftp-server.conf
     register: __smoke_sftp_match
-
   - name: Read SFTP sshd match configuration
     ansible.builtin.slurp:
       path: /etc/ssh/sshd_config.d/99-sftp-server.conf
     register: __smoke_sftp_match_content
-
   - name: Assert SFTP match configuration content
     ansible.builtin.assert:
       that:
       - (__smoke_sftp_match_content.content | b64decode) is search("Match User sftpci")
       - (__smoke_sftp_match_content.content | b64decode) is search("ForceCommand internal-sftp -R")
       - (__smoke_sftp_match_content.content | b64decode) is search("Match Group sftp")
-      fail_msg: "The generated SFTP sshd match configuration is incomplete."
-
+      fail_msg: The generated SFTP sshd match configuration is incomplete.
   - name: Assert smoke test artifacts exist
     ansible.builtin.assert:
       that:
@@ -142,4 +124,18 @@
       - __smoke_sftp_chroot.stat.exists
       - __smoke_sftp_home.stat.exists
       - __smoke_sftp_match.stat.exists
-      fail_msg: "One or more smoke test artifacts are missing."
+      fail_msg: One or more smoke test artifacts are missing.
+  - name: Apply portable operator prompt
+    ansible.builtin.import_role:
+      name: degitag.infrastructure.prompt
+  - name: Render disabled maintenance reboot policy
+    ansible.builtin.import_role:
+      name: degitag.infrastructure.conditional_reboot
+  - name: Exercise disabled reboot controller without rebooting
+    ansible.builtin.command:
+      argv:
+      - /usr/local/sbin/reboot-check.py
+      - --config
+      - /etc/conditional-reboot.json
+      - --dry-run
+    changed_when: false

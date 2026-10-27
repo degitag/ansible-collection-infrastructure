@@ -1,0 +1,12 @@
+---
+firewall_backend: auto
+firewall_manage_service: true
+firewall_service_enabled: true
+firewall_service_state: started
+# Activating or disabling a firewall is separate from adding rules.
+firewall_manage_activation: false
+firewall_enabled: true
+firewall_default_incoming_policy: deny
+firewall_zone: public
+firewall_rules: []
+firewall_trusted_sources: []

@@ -2,29 +2,22 @@
 fail2ban_manage_service: true
 fail2ban_service_enabled: true
 fail2ban_service_state: started
-fail2ban_mail_recipient: "root@localhost"
+fail2ban_mail_recipient: root@localhost
 fail2ban_loglevel: INFO
 fail2ban_logtarget: /var/log/fail2ban.log
 fail2ban_syslog_target: /var/log/fail2ban.log
 fail2ban_syslog_facility: 1
 fail2ban_socket: /var/run/fail2ban/fail2ban.sock
 fail2ban_pidfile: /var/run/fail2ban/fail2ban.pid
-fail2ban_sendername: "{{ ansible_hostname + '.' + ansible_domain if ansible_domain is defined and ansible_domain != '' else ansible_hostname }}"
+fail2ban_sendername: '{{ ansible_facts.fqdn | default(inventory_hostname) }}'
 fail2ban_ignoreips:
-- 127.0.0.1/8
+- 127.0.0.0/8
 - ::1
-- 10.0.0.0/8               # RFC 1918 local private network (LAN)
-- 100.64.0.0/10            # RFC 6598 shared address space (CGN)
-- 169.254.0.0/16           # RFC 3927 link-local (directly plugged) machines
-- 172.16.0.0/12            # RFC 1918 local private network (LAN)
-- 192.168.0.0/16           # RFC 1918 local private network (LAN)
-- fc00::/7                 # RFC 4193 local private network range
-- fe80::/10                # RFC 4291 link-local (directly plugged) machines
 fail2ban_bantime: 600
 fail2ban_maxretry: 3
 fail2ban_findtime: 600
 fail2ban_backend: systemd
-fail2ban_destemail: "{{ fail2ban_mail_recipient }}"
+fail2ban_destemail: '{{ fail2ban_mail_recipient }}'
 fail2ban_banaction: nftables-multiport
 fail2ban_allowipv6: auto
 fail2ban_sender:
@@ -49,3 +42,4 @@ fail2ban_jails:
 #      failregex: 'pvedaemon\[.*authentication failure; rhost=<HOST> user=.* msg=.*'
 #      ignoreregex: ""
 #      journalmatch: "_SYSTEMD_UNIT=pvedaemon.service"
+fail2ban_manage_epel: true

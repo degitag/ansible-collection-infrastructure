@@ -15,9 +15,18 @@ argument_specs:
         - Controls `resolvconf_nameservers` for the `resolvconf` role.
         required: false
         type: list
-        elements: str
       resolvconf_search_domains:
         description:
         - Controls `resolvconf_search_domains` for the `resolvconf` role.
         required: false
         type: list
+      resolvconf_manage_config:
+        description:
+        - Controls `resolvconf_manage_config` for the `resolvconf` role.
+        required: false
+        type: bool
+      resolvconf_unsafe_writes:
+        description:
+        - Controls `resolvconf_unsafe_writes` for the `resolvconf` role.
+        required: false
+        type: bool

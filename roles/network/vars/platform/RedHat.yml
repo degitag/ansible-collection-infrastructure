@@ -1,0 +1,21 @@
+---
+_network_platform_backend: nmcli
+_network_backend_packages:
+  interfaces:
+  - ifupdown
+  - ifenslave
+  - bridge-utils
+  - vlan
+  - resolvconf
+  netplan:
+  - netplan.io
+  nmcli:
+  - NetworkManager
+  - python3-dbus
+_network_config_paths:
+  interfaces: /etc/network/interfaces.d/80-degit-{{ network_profile_name }}
+  netplan: /etc/netplan/80-degit-{{ network_profile_name }}.yaml
+_network_services:
+  interfaces: networking
+  netplan: systemd-networkd
+  nmcli: NetworkManager

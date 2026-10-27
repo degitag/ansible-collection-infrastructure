@@ -1,0 +1,20 @@
+---
+- name: Prepare EPEL platform variables
+  ansible.builtin.import_tasks: preflight.yml
+  tags: always
+- name: Import the fingerprint-verified Fedora EPEL signing key
+  ansible.builtin.rpm_key:
+    key: '{{ _dnf_epel_key_url }}'
+    fingerprint: '{{ _dnf_epel_fingerprint }}'
+    state: present
+  become: true
+- name: Configure the signed EPEL 9 repository
+  ansible.builtin.yum_repository:
+    name: epel
+    description: Extra Packages for Enterprise Linux 9
+    metalink: '{{ _dnf_epel_metalink }}'
+    gpgkey: '{{ _dnf_epel_key_url }}'
+    gpgcheck: true
+    enabled: true
+    state: present
+  become: true

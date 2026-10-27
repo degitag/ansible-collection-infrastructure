@@ -1,0 +1,51 @@
+---
+- name: Ensure Netplan directory exists
+  ansible.builtin.file:
+    path: /etc/netplan
+    state: directory
+    mode: '0755'
+  become: true
+
+- name: Render managed Netplan configuration
+  ansible.builtin.copy:
+    content: '{{ _network_compiled | to_nice_yaml(indent=2) }}'
+    dest: '{{ _network_config_paths.netplan }}'
+    owner: root
+    group: root
+    mode: '0600'
+    backup: true
+  register: _network_render
+  become: true
+
+- name: Validate and optionally activate Netplan # noqa: no-handler -- validation must run before continuing, with immediate rollback
+  when: _network_render.changed or (network_apply | bool and (network_interfaces | degitag.infrastructure.network_needs_apply(_network_runtime.stdout | from_json)))
+  become: true
+  block:
+  - name: Validate complete Netplan configuration
+    ansible.builtin.command: /usr/sbin/netplan generate
+    changed_when: false
+    when: not ansible_check_mode
+
+  - name: Activate Netplan configuration
+    ansible.builtin.command: /usr/sbin/netplan apply
+    changed_when: true
+    when: network_apply | bool and not ansible_check_mode
+
+  rescue:
+  - name: Restore previous managed fragment after validation failure
+    ansible.builtin.copy:
+      src: '{{ _network_render.backup_file }}'
+      dest: '{{ _network_config_paths.netplan }}'
+      remote_src: true
+      mode: '0600'
+    when: _network_render.backup_file is defined
+
+  - name: Remove new fragment after validation failure
+    ansible.builtin.file:
+      path: '{{ _network_config_paths.netplan }}'
+      state: absent
+    when: _network_render.backup_file is not defined
+
+  - name: Report rejected network configuration
+    ansible.builtin.fail:
+      msg: Netplan rejected the configuration; the managed fragment was rolled back. Verify connectivity through the console.

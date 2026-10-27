@@ -1,0 +1,37 @@
+---
+- name: Allow explicitly trusted source networks
+  community.general.ufw:
+    rule: allow
+    from_ip: '{{ item }}'
+    comment: Explicit trusted network
+  loop: '{{ _firewall_trusted_sources }}'
+  become: true
+- name: Allow forwarding from explicitly trusted source networks
+  community.general.ufw:
+    rule: allow
+    route: true
+    from_ip: '{{ item }}'
+    comment: Explicit trusted network forwarding
+  loop: '{{ _firewall_trusted_sources }}'
+  become: true
+- name: Apply portable UFW rules
+  community.general.ufw:
+    port: "{{ item.port | string | replace('-', ':') }}"
+    proto: "{{ item.protocol | default('tcp') }}"
+    rule: "{{ item.action | default('allow') }}"
+    from_ip: "{{ item.source | default('any') }}"
+    to_ip: "{{ item.destination | default('any') }}"
+    interface: '{{ item.interface | default(omit) }}'
+    direction: in
+    comment: '{{ item.comment | default(omit) }}'
+    delete: "{{ item.state | default('present') == 'absent' }}"
+  loop: '{{ _firewall_rules }}'
+  become: true
+
+- name: Configure UFW activation and incoming policy
+  community.general.ufw:
+    state: "{{ 'enabled' if firewall_enabled else 'disabled' }}"
+    direction: incoming
+    policy: '{{ firewall_default_incoming_policy }}'
+  when: firewall_manage_activation | bool
+  become: true

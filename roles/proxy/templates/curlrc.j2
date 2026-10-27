@@ -1,9 +1,8 @@
 {{ ansible_managed | comment }}
-
-# System-wide curl configuration file for proxy settings
-
-# Use a proxy server
-{% if proxy_env.http_proxy is defined and proxy_env.http_proxy != '' %}proxy = "{{ proxy_env.http_proxy }}"{% endif %}
-
-# Bypass proxy for local addresses
-{% if proxy_env.no_proxy is defined and proxy_env.no_proxy != '' %}noproxy = "{{ proxy_env.no_proxy }}"{% endif %}
+{% set url = proxy_environment.https_proxy or proxy_environment.http_proxy or proxy_environment.all_proxy %}
+{% if url %}
+proxy = {{ url | to_json }}
+{% endif %}
+{% if proxy_environment.no_proxy %}
+noproxy = {{ proxy_environment.no_proxy | to_json }}
+{% endif %}

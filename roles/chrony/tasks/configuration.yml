@@ -1,0 +1,83 @@
+---
+- name: Uninstall default time synchronization services
+  ansible.builtin.package:
+    name: '{{ chrony_uninstall_packages }}'
+    state: absent
+    policy_rc_d: "{{ 101 if ansible_facts.os_family == 'Debian' and not (chrony_manage_service | bool and chrony_service_state == 'started') else omit }}"
+  when: ansible_facts.os_family == "Debian"
+  become: true
+  tags: chrony
+
+- name: Stop and disable systemd-timesyncd on Debian-based systems
+  ansible.builtin.service:
+    name: systemd-timesyncd
+    state: stopped
+    enabled: false
+  failed_when: false
+  when: ansible_facts.os_family == "Debian"
+  become: true
+  tags: chrony
+
+- name: Ensure package is installed
+  ansible.builtin.package:
+    name: '{{ chrony_package_name }}'
+    state: present
+    policy_rc_d: "{{ 101 if ansible_facts.os_family == 'Debian' and not (chrony_manage_service | bool and chrony_service_state == 'started') else omit }}"
+  become: true
+  tags: chrony
+
+- name: Configure service
+  ansible.builtin.template:
+    src: chrony.conf.j2
+    dest: '{{ chrony_config_file }}'
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart chrony
+  become: true
+  tags: chrony
+
+- name: Configure timezone if not set
+  community.general.timezone:
+    name: '{{ chrony_timezone }}'
+  when: chrony_set_time_zone | bool
+  become: true
+  tags: chrony
+
+- name: Check if NTP is enabled
+  ansible.builtin.command:
+    cmd: timedatectl show -p NTP --value
+  register: __chrony_ntp_status
+  changed_when: false
+  failed_when: false
+  when:
+  - chrony_manage_ntp | bool
+  - ansible_facts.service_mgr == "systemd"
+  become: true
+  tags: chrony
+
+- name: Set timedatectl ntp true if not enabled
+  ansible.builtin.command:
+    cmd: timedatectl set-ntp true
+  when:
+  - chrony_manage_ntp | bool
+  - ansible_facts.service_mgr == "systemd"
+  - __chrony_ntp_status.rc == 0
+  - __chrony_ntp_status.stdout | trim != "yes"
+  changed_when: true
+  become: true
+  tags: chrony
+
+- name: Ensure service is started and enabled
+  ansible.builtin.service:
+    name: '{{ chrony_service_name }}'
+    state: '{{ chrony_service_state }}'
+    enabled: '{{ chrony_service_enabled }}'
+  become: true
+  when: chrony_manage_service | bool
+  tags: chrony
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers
+  become: true
+  tags: chrony

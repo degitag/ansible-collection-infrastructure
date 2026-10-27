@@ -1,0 +1,15 @@
+---
+docker_apt_keyring_path: /etc/apt/keyrings/docker.asc
+docker_apt_repository_suite: "{{ ansible_facts.distribution_release }}"
+docker_apt_repository_url: https://download.docker.com/linux/ubuntu
+docker_conflicting_packages:
+- docker.io
+- docker-compose
+- docker-doc
+- podman-docker
+- containerd
+- runc
+docker_repository_gpg_key_url: https://download.docker.com/linux/ubuntu/gpg
+docker_repository_prerequisite_packages:
+- ca-certificates
+- curl

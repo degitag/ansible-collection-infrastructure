@@ -41,6 +41,11 @@ argument_specs:
         - Controls `keepalived_config_playbook` for the `keepalived` role.
         required: false
         type: dict
+      keepalived_healthcheck_scripts:
+        description:
+        - Controls `keepalived_healthcheck_scripts` for the `keepalived` role.
+        required: false
+        type: list
       keepalived_config_defaults:
         description:
         - Controls `keepalived_config_defaults` for the `keepalived` role.

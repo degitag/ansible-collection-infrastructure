@@ -1,0 +1,52 @@
+---
+- name: Verify baseline services on disposable VMs
+  hosts: all
+  become: true
+  gather_facts: true
+  roles:
+  - role: degitag.infrastructure.packages
+  - role: degitag.infrastructure.ca
+  - role: degitag.infrastructure.logrotate
+  - role: degitag.infrastructure.chrony
+  - role: degitag.infrastructure.qemu_guest_agent
+  - role: degitag.infrastructure.auditd
+  - role: degitag.infrastructure.fail2ban
+  - role: degitag.infrastructure.sshd
+  - role: degitag.infrastructure.borgbackup
+  tasks:
+  - name: Flush service handlers before verification
+    ansible.builtin.meta: flush_handlers
+
+  - name: Verify SSH connectivity after the daemon restart
+    ansible.builtin.wait_for_connection:
+      timeout: 45
+
+  - name: Inspect managed services
+    ansible.builtin.service_facts:
+
+  - name: Assert security and VM services are running
+    ansible.builtin.assert:
+      that:
+      - ansible_facts.services['auditd.service'].state == 'running'
+      - ansible_facts.services['fail2ban.service'].state == 'running'
+      - ansible_facts.services['qemu-guest-agent.service'].state == 'running'
+      - ansible_facts.services[sshd_service_name + '.service'].state == 'running'
+
+  - name: Verify SSH configuration using the native validator
+    ansible.builtin.command: /usr/sbin/sshd -t
+    changed_when: false
+
+  - name: Verify Fail2ban configuration using the native validator
+    ansible.builtin.command: fail2ban-client -t
+    changed_when: false
+
+  - name: Verify SELinux remains enforcing on EL9
+    ansible.builtin.command: getenforce
+    register: _test_selinux
+    changed_when: false
+    when: ansible_facts.os_family == 'RedHat'
+
+  - name: Assert SELinux mode was preserved
+    ansible.builtin.assert:
+      that: _test_selinux.stdout == 'Enforcing'
+    when: ansible_facts.os_family == 'RedHat'

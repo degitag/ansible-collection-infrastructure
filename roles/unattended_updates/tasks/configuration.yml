@@ -1,0 +1,41 @@
+---
+- name: Install package
+  ansible.builtin.package:
+    name: unattended-upgrades
+    state: present
+  become: true
+  tags: unattended-updates
+
+- name: Configure unattended-upgrades
+  ansible.builtin.template:
+    src: unattended-upgrades.j2
+    dest: /etc/apt/apt.conf.d/90-ansible-unattended-upgrades
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  tags: unattended-updates
+
+- name: Create hide-esm-in-motd files
+  ansible.builtin.file:
+    path: '{{ item }}'
+    state: touch
+    owner: root
+    group: root
+    mode: '0644'
+    access_time: preserve
+    modification_time: preserve
+  with_items:
+  #    - /var/lib/ubuntu-advantage/hide-esm-in-motd
+  - /var/lib/update-notifier/hide-esm-in-motd
+  when: not ansible_facts.distribution == "Debian"
+  become: true
+  tags: unattended-updates
+
+- name: Remove /var/lib/update-notifier/updates-available
+  ansible.builtin.file:
+    path: /var/lib/update-notifier/updates-available
+    state: absent
+  when: not ansible_facts.distribution == "Debian"
+  become: true
+  tags: unattended-updates

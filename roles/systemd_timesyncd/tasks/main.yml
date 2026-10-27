@@ -1,40 +1,7 @@
 ---
-- name: Validate supported platforms
-  ansible.builtin.assert:
-    that:
-    - ansible_os_family == "Debian"
-    fail_msg: "The systemd_timesyncd role currently supports Debian and Ubuntu systems only."
-  tags: timesyncd
-
-- name: Configure /etc/timezone
-  ansible.builtin.copy:
-    content: "{{ systemd_timesyncd_time_zone }}\n"
-    dest: /etc/timezone
-    owner: root
-    group: root
-    mode: "0644"
-  tags: timesyncd
-
-- name: Configure /etc/systemd/timesyncd.conf
-  ansible.builtin.template:
-    src: timesyncd.conf.j2
-    dest: /etc/systemd/timesyncd.conf
-    owner: root
-    group: root
-    mode: "0644"
-  notify: restart systemd-timesyncd
-  when: systemd_timesyncd
-  tags: timesyncd
-
-- name: Start and enable systemd time services
-  ansible.builtin.service:
-    name: "{{ item }}"
-    state: "{{ systemd_timesyncd_service_state }}"
-    enabled: "{{ systemd_timesyncd_service_enabled }}"
-  loop:
-  - systemd-timedated
-  - systemd-timesyncd
-  when:
-  - systemd_timesyncd
-  - systemd_timesyncd_manage_service | bool
-  tags: timesyncd
+- name: Prepare facts and platform variables
+  ansible.builtin.import_tasks: preflight.yml
+  tags: always
+- name: Apply systemd_timesyncd configuration
+  ansible.builtin.import_tasks: configuration.yml
+  tags: systemd_timesyncd

@@ -5,3 +5,6 @@
     state: restarted
   become: true
   tags: dnf_automatic
+  when:
+  - dnf_automatic_manage_service | bool
+  - dnf_automatic_service_state != 'stopped'

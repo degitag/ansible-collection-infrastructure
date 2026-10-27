@@ -1,0 +1,232 @@
+---
+- name: Fail for unsupported distributions
+  ansible.builtin.fail:
+    msg: 'Distribution {{ ansible_facts.os_family }} ({{ ansible_facts.distribution }}) is not supported by this role. Supported: Debian, Ubuntu, RedHat, Rocky'
+  when: ansible_facts.os_family not in ['Debian', 'RedHat']
+  tags: certbot
+
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+  when:
+  - ansible_facts.os_family == "Debian"
+  - certbot_update_cache | default(false)
+  changed_when: false
+  become: true
+  tags: certbot
+
+- name: Derive the effective Cloudflare token
+  ansible.builtin.set_fact:
+    certbot_cloudflare_api_token_effective: >-
+      {{
+        certbot_cloudflare_api_token
+        if certbot_cloudflare_api_token | default('') | length > 0
+        else (
+          certbot_cloudflare_api_key
+          if (
+            certbot_cloudflare_api_key | default('') | length > 0 and
+            (
+              certbot_cloudflare_api_key is match('^mki_.*') or
+              not (certbot_cloudflare_api_key is match('^[A-Fa-f0-9]{37}$'))
+            )
+          )
+          else ''
+        )
+      }}
+  when:
+  - certbot_certs | length > 0
+  - certbot_dns_provider == "cloudflare"
+  tags: certbot
+
+  no_log: true
+- name: Derive the legacy Cloudflare key after token selection
+  ansible.builtin.set_fact:
+    certbot_cloudflare_api_key_effective: >-
+      {{
+        certbot_cloudflare_api_key
+        if (
+          certbot_cloudflare_api_key | default('') | length > 0 and
+          certbot_cloudflare_api_token_effective | length == 0
+        )
+        else ''
+      }}
+  when:
+  - certbot_certs | length > 0
+  - certbot_dns_provider == "cloudflare"
+  tags: certbot
+  no_log: true
+- name: Validate Cloudflare credentials
+  ansible.builtin.assert:
+    that:
+    - certbot_acme_email | length > 0
+    - certbot_cloudflare_api_token_effective | length > 0 or certbot_cloudflare_api_key_effective | length > 0
+    - certbot_cloudflare_api_token_effective | length > 0 or certbot_cloudflare_api_email | length > 0
+    fail_msg: >-
+      certbot_acme_email and either certbot_cloudflare_api_token or certbot_cloudflare_api_key must be set. certbot_cloudflare_api_email is only required when using
+      the legacy global API key.
+  when:
+  - certbot_certs | length > 0
+  - certbot_dns_provider == "cloudflare"
+  tags: certbot
+
+- name: Validate Hetzner credentials
+  ansible.builtin.assert:
+    that:
+    - certbot_acme_email | length > 0
+    - certbot_hetzner_api_token | length > 0
+    fail_msg: >-
+      certbot_acme_email and certbot_hetzner_api_token must be set when certbot_dns_provider is hetzner.
+  when:
+  - certbot_certs | length > 0
+  - certbot_dns_provider == "hetzner"
+  tags: certbot
+
+- name: Validate DNS provider
+  ansible.builtin.assert:
+    that:
+    - certbot_dns_provider in ['cloudflare', 'hetzner']
+    fail_msg: 'certbot_dns_provider must be one of: cloudflare, hetzner'
+  when: certbot_certs | length > 0
+  tags: certbot
+
+- name: Configure the documented EPEL package source for Certbot
+  ansible.builtin.include_role:
+    name: degitag.infrastructure.dnf_repos
+    tasks_from: epel
+  when:
+  - ansible_facts.os_family == 'RedHat'
+  - certbot_manage_epel | bool
+  tags: certbot
+- name: Install Certbot and dependencies
+  ansible.builtin.package:
+    name: '{{ certbot_packages_base + certbot_dns_provider_packages[certbot_dns_provider] }}'
+    state: present
+  become: true
+  tags: certbot
+
+- name: Create Certbot credentials directory
+  ansible.builtin.file:
+    path: /etc/letsencrypt
+    state: directory
+    mode: '0700'
+  become: true
+  tags: certbot
+
+- name: Create Hetzner INI file
+  ansible.builtin.template:
+    src: hetzner.ini.j2
+    dest: '{{ certbot_hetzner_credentials_path }}'
+    mode: '0600'
+    owner: root
+    group: root
+  become: true
+  no_log: true
+  when:
+  - certbot_dns_provider == "hetzner"
+  - certbot_certs | length > 0
+  tags: certbot
+
+- name: Create Hetzner DNS hook
+  ansible.builtin.template:
+    src: hetzner-dns-hook.py.j2
+    dest: '{{ certbot_hetzner_hook_path }}'
+    mode: '0700'
+    owner: root
+    group: root
+  become: true
+  when: certbot_dns_provider == "hetzner"
+  tags: certbot
+
+- name: Create certbot deploy hook log file
+  ansible.builtin.file:
+    path: /var/log/certbot-deployhook.log
+    state: touch
+    mode: '0644'
+    owner: root
+    group: root
+    access_time: preserve
+    modification_time: preserve
+  become: true
+  tags: certbot
+
+- name: Create deploy hook directory
+  ansible.builtin.file:
+    path: /etc/letsencrypt/renewal-hooks/deploy
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+  tags: certbot
+
+- name: Ensure certificate copy destination exists
+  ansible.builtin.file:
+    path: '{{ certbot_copy_destination_dir }}'
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  when: certbot_copy_to_ssl | bool
+  become: true
+  tags: certbot
+
+- name: Create Cloudflare INI file
+  ansible.builtin.template:
+    src: cloudflare.ini.j2
+    dest: '{{ certbot_cloudflare_credentials_path }}'
+    mode: '0600'
+  become: true
+  no_log: true
+  when:
+  - certbot_dns_provider == "cloudflare"
+  - certbot_certs | length > 0
+  tags: certbot
+
+- name: Copy deployhook from template
+  ansible.builtin.template:
+    src: deployhook.sh.j2
+    dest: /etc/letsencrypt/renewal-hooks/deploy/deployhook.sh
+    mode: '0755'
+    owner: root
+    group: root
+  become: true
+  tags: certbot
+
+- name: Run Certbot to generate certificate with Cloudflare DNS
+  ansible.builtin.command: >
+    certbot certonly --dns-cloudflare --dns-cloudflare-credentials {{ certbot_cloudflare_credentials_path }} --dns-cloudflare-propagation-seconds {{ certbot_dns_propagation_seconds
+    }} --non-interactive --agree-tos --email {{ certbot_acme_email }} --cert-name "{{ item.domains | first }}" --expand -d {{ item.domains | join(',') }} --deploy-hook
+    '/etc/letsencrypt/renewal-hooks/deploy/deployhook.sh'
+  loop: '{{ certbot_certs }}'
+  tags: certbot
+  register: certbot_output
+  changed_when: >
+    'not yet due for renewal' not in (((certbot_output.stdout | default('')) ~ (certbot_output.stderr | default(''))) | lower) and 'no action taken' not in (((certbot_output.stdout
+    | default('')) ~ (certbot_output.stderr | default(''))) | lower)
+  become: true
+  when: certbot_dns_provider == "cloudflare"
+
+- name: Run Certbot to generate certificate with Hetzner DNS
+  ansible.builtin.command: >
+    certbot certonly --manual --preferred-challenges dns --manual-auth-hook '{{ certbot_hetzner_hook_path }} add' --manual-cleanup-hook '{{ certbot_hetzner_hook_path
+    }} remove' --non-interactive --agree-tos --email {{ certbot_acme_email }} --cert-name "{{ item.domains | first }}" --expand -d {{ item.domains | join(',') }}
+    --deploy-hook '/etc/letsencrypt/renewal-hooks/deploy/deployhook.sh'
+  loop: '{{ certbot_certs }}'
+  tags: certbot
+  register: certbot_output
+  changed_when: >
+    'not yet due for renewal' not in (((certbot_output.stdout | default('')) ~ (certbot_output.stderr | default(''))) | lower) and 'no action taken' not in (((certbot_output.stdout
+    | default('')) ~ (certbot_output.stderr | default(''))) | lower)
+  become: true
+  when: certbot_dns_provider == "hetzner"
+
+- name: Modify Certbot renewal configuration file
+  ansible.builtin.lineinfile:
+    path: /etc/letsencrypt/renewal/{{ item.domains | first }}.conf
+    regexp: ^renew_hook
+    line: renew_hook = /etc/letsencrypt/renewal-hooks/deploy/deployhook.sh
+    state: present
+  loop: '{{ certbot_certs }}'
+  become: true
+  tags: certbot

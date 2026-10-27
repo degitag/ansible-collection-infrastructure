@@ -1,0 +1,6 @@
+---
+_firewall_platform_backend: firewalld
+_firewall_packages:
+- firewalld
+- python3-firewall
+_firewall_service: firewalld

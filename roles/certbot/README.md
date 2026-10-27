@@ -4,9 +4,18 @@ Request and renew TLS certificates with Certbot.
 
 ## Supported platforms
 
-- Ubuntu 22.04+
-- Debian 12+
-- RHEL 9+
+- Ubuntu 22.04, 24.04, 26.04
+- Debian 13
+- Rocky Linux 9 / RHEL 9
+
+## Architecture and operation
+
+Facts are collected at entry only when the required platform facts are missing.
+`tasks/preflight.yml` rejects unsupported releases before making changes and loads
+family, distribution and release variables from `vars/platform/` in that order.
+Public inputs belong in `defaults/main.yml`; platform internals belong in `vars/`.
+
+Certificate issuance is opt-in through certbot_certs. Supply an ACME email and provider credentials via Vault before requesting certificates. Cloudflare token selection runs before legacy-key derivation and is hidden from logs. On EL9 the role configures signed EPEL through dnf_repos unless certbot_manage_epel is false. Issuance and renewals require separate DNS/provider acceptance tests.
 
 ## Role Variables
 
@@ -14,23 +23,23 @@ The role interface is validated through `meta/argument_specs.yml`. Defaults are 
 
 ```yaml
 ---
-certbot_dns_provider: hetzner
-certbot_hetzner_api_token: '{{ encrypted_hetzner_dns_api_key }}'
-certbot_hetzner_credentials_path: /etc/letsencrypt/hetzner.ini
+certbot_dns_provider: cloudflare
 certbot_cloudflare_api_email: ''
 certbot_cloudflare_api_key: ''
 certbot_cloudflare_api_token: ''
 certbot_cloudflare_credentials_path: /etc/letsencrypt/cloudflare.ini
+certbot_hetzner_api_token: ''
+certbot_hetzner_credentials_path: /etc/letsencrypt/hetzner.ini
+certbot_hetzner_api_url: https://api.hetzner.cloud/v1
+certbot_hetzner_ttl: 120
+certbot_hetzner_hook_path: /etc/letsencrypt/hetzner-dns-hook.py
 certbot_dns_propagation_seconds: 30
 certbot_copy_to_ssl: true
 certbot_copy_destination_dir: /etc/ssl
 certbot_renew_hook: ''
-certbot_certs:
-- domains:
-  - '{{ ansible_fqdn }}'
-  services:
-  - name: node_exporter
-    action: restart
+certbot_acme_email: '{{ certbot_mail | default(certbot_cloudflare_api_email) }}'
+certbot_certs: []
+certbot_manage_epel: true
 ```
 
 ## Example Playbook
@@ -39,10 +48,29 @@ certbot_certs:
 - name: Apply certbot
   hosts: all
   become: true
+  gather_facts: true
   roles:
-    - role: onkeldom.default_server.certbot
+    - role: degitag.infrastructure.certbot
 ```
 
 ## Testing
 
-The collection CI runs `ansible-lint`, `ansible-test sanity`, repository consistency tests, and per-role syntax checks using `roles/certbot/tests/test.yml`.
+Build and install the current collection checkout before running syntax checks, so the
+fully qualified role reference resolves to this implementation.
+
+Run `python tools/generate_role_scaffold.py --check`, `pytest tests/unit` and
+`bash tests/run_role_syntax_checks.sh` from the collection root.
+CI additionally runs YAML lint, Ansible lint, collection build/install and container smoke tests.
+VM functional results are tracked separately; metadata lists intended compatibility,
+not proof that every feature has passed on every distribution.
+
+## Dependencies
+
+Install the collection dependencies from `requirements.yml`. Role dependencies:
+`[]`.
+
+## Change management
+
+Use check mode where the underlying modules support it. Review the diff before applying
+changes. Network, firewall, identity and storage changes need an out-of-band recovery
+path. Secrets belong in Ansible Vault or the operator secret store, never in defaults.

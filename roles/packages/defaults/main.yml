@@ -1,5 +1,5 @@
 ---
-packages_epel_release: true
+packages_epel_release: false
 packages_manage_cache: true
 packages_group_vars_install: []
 packages_group_vars_install_epel: []
@@ -10,3 +10,6 @@ packages_host_vars_remove: []
 packages_playbook_install: []
 packages_playbook_install_epel: []
 packages_playbook_remove: []
+packages_defaults_install: '{{ _packages_platform_install | default([]) }}'
+packages_defaults_install_epel: []
+packages_defaults_remove: []

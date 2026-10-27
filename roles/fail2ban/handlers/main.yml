@@ -5,3 +5,6 @@
     state: restarted
   become: true
   tags: fail2ban
+  when:
+  - fail2ban_manage_service | bool
+  - fail2ban_service_state != 'stopped'

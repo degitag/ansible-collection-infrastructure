@@ -1,0 +1,33 @@
+---
+- name: Combine sysctl entries from all sources
+  ansible.builtin.set_fact:
+    sysctl_entries: >-
+      {{
+        (sysctl_defaults | default({})) |
+        combine(sysctl_group_vars | default({}), recursive=True) |
+        combine(sysctl_host_vars | default({}), recursive=True) |
+        combine(sysctl_playbook | default({}), recursive=True)
+      }}
+  tags: sysctl
+
+- name: Set sysctl entries
+  ansible.posix.sysctl:
+    name: '{{ item.key }}'
+    value: '{{ item.value }}'
+    state: present
+    sysctl_set: true
+    reload: true
+  loop: '{{ sysctl_entries | dict2items }}'
+  when: item.value is not none
+  become: true
+  tags: sysctl
+
+- name: Remove sysctl entries
+  ansible.posix.sysctl:
+    name: '{{ item.key }}'
+    state: absent
+    reload: true
+  loop: '{{ sysctl_entries | dict2items }}'
+  when: item.value is none
+  become: true
+  tags: sysctl

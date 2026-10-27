@@ -1,10 +1,10 @@
 ---
 - name: Create directories for NFS exports
   ansible.builtin.file:
-    path: "{{ item.path }}"
+    path: '{{ item.path }}'
     state: directory
-    mode: "0755"
-  loop: "{{ nfs_exports }}"
+    mode: '0755'
+  loop: '{{ nfs_exports }}'
   when:
   - nfs_exports | length > 0
   - item.create is not defined or item.create
@@ -12,28 +12,28 @@
 - name: Configure NFS exports
   ansible.builtin.blockinfile:
     path: /etc/exports
-    marker: "# {mark}: Ansible-managed NFS exports"
+    marker: '# {mark}: Ansible-managed NFS exports'
     content: |
       {% for export in nfs_exports %}
       {{ export.path }} {{ export.exports | join(" ") }}
       {% endfor %}
-  notify: reload nfs
+  notify: Reload nfs
   when: nfs_exports | length > 0
 
 - name: Remove managed NFS exports block when no exports are configured
   ansible.builtin.blockinfile:
     path: /etc/exports
-    marker: "# {mark}: Ansible-managed NFS exports"
+    marker: '# {mark}: Ansible-managed NFS exports'
     state: absent
   when: nfs_exports | length == 0
-  notify: reload nfs
+  notify: Reload nfs
 
 - name: Configure the NFS server daemon
   ansible.builtin.service:
-    name: "{{ nfs_server_daemon }}"
-    state: "{{ nfs_service_state }}"
-    enabled: "{{ nfs_service_enabled }}"
+    name: '{{ nfs_server_daemon }}'
+    state: '{{ nfs_service_state }}'
+    enabled: '{{ nfs_service_enabled }}'
   when: nfs_manage_service | bool
 
 - name: Reload NFS exports
-  meta: flush_handlers
+  ansible.builtin.meta: flush_handlers

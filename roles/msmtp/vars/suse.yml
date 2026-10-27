@@ -1,8 +1,0 @@
----
-msmtp_packages:
-- msmtp
-msmtp_config_file: /etc/msmtprc
-msmtp_user: root
-msmtp_group: root
-msmtp_tls_trust_file: /etc/ssl/ca-bundle.pem
-msmtp_aliases_file: /etc/aliases

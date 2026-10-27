@@ -23,7 +23,7 @@
 $TTL {{ zone.minimum | default(86400) }}
 
 {{ zone.name }}. IN SOA {{ (zone.nameservers | default(['ns1.' ~ zone.name ~ '.']))[0] }} hostmaster.{{ zone.name }}. (
-        {{ zone.serial | default(ansible_date_time.epoch) }} ; serial
+        {{ zone.serial | default(ansible_facts.date_time.epoch) }} ; serial
         {{ zone.refresh | default(3600) }} ; refresh
         {{ zone.retry | default(1800) }} ; retry
         {{ zone.expire | default(604800) }} ; expire

@@ -3,12 +3,13 @@
   ansible.builtin.apt:
     name: dirmngr
     state: present
+    policy_rc_d: "{{ 101 if ansible_facts.os_family == 'Debian' and not (nginx_manage_service | bool and nginx_service_state == 'started') else omit }}"
   become: true
   tags: nginx
 
 - name: Add PPA for Nginx (if configured).
   ansible.builtin.apt_repository:
-    repo: 'ppa:nginx/{{ nginx_ppa_version }}'
+    repo: ppa:nginx/{{ nginx_ppa_version }}
     state: present
     update_cache: true
   register: nginx_ppa_added
@@ -18,8 +19,9 @@
 
 - name: Ensure nginx will reinstall if the PPA was just added.
   ansible.builtin.apt:
-    name: "{{ nginx_package_name }}"
+    name: '{{ nginx_package_name }}'
     state: absent
+    policy_rc_d: "{{ 101 if ansible_facts.os_family == 'Debian' and not (nginx_manage_service | bool and nginx_service_state == 'started') else omit }}"
   when: nginx_ppa_added is changed
   become: true
   tags:

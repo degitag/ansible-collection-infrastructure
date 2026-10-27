@@ -1,0 +1,5 @@
+{{ ansible_managed | comment }}
+[Service]
+{% for key, value in _docker_proxy_environment.items() %}
+Environment={{ (key ~ '=' ~ value) | replace('%', '%%') | to_json }}
+{% endfor %}

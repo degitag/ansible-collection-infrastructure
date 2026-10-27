@@ -11,9 +11,9 @@ telegraf_firewall_ports:
 - 9273/tcp
 telegraf_manage_main_config: true
 telegraf_manage_plugin_configs: true
-telegraf_apt_repo: "deb [signed-by={{ telegraf_apt_keyring_path }}] https://repos.influxdata.com/debian stable main"
-telegraf_yum_repo_baseurl: "https://repos.influxdata.com/rhel/$releasever/$basearch/stable"
-telegraf_gpg_key_url: "https://repos.influxdata.com/influxdata-archive.key"
+telegraf_apt_repo: deb [signed-by={{ telegraf_apt_keyring_path }}] https://repos.influxdata.com/debian stable main
+telegraf_yum_repo_baseurl: https://repos.influxdata.com/rhel/$releasever/$basearch/stable
+telegraf_gpg_key_url: https://repos.influxdata.com/influxdata-archive.key
 telegraf_apt_keyring_path: /etc/apt/keyrings/influxdata-archive.gpg
 telegraf_apt_key_download_path: /etc/apt/keyrings/influxdata-archive.key
 telegraf_config_path: /etc/telegraf/telegraf.conf
@@ -43,35 +43,35 @@ telegraf_plugins_playbook: []
 #         config:
 #           pid_file: /var/run/sshd.pid
 telegraf_plugin_files:
-  - name: "10-inputs-host-base.conf"
-    sections:
-      - plugin_type: inputs
-        type: procstat
-        config:
-          pid_file: "/var/run/sshd.pid"
-      - plugin_type: inputs
-        type: diskio
-        config: {}
-      - plugin_type: inputs
-        type: kernel
-        config: {}
-      - plugin_type: inputs
-        type: processes
-        config: {}
-      - plugin_type: inputs
-        type: netstat
-        config: {}
-      - plugin_type: inputs
-        type: lvm
-        config: {}
-      - plugin_type: inputs
-        type: cgroup
-        config:
-          paths:
-            - "/sys/fs/cgroup/cpu,cpuacct/cpuacct.usage"
-            - "/sys/fs/cgroup/cpu,cpuacct/cpuacct.stat"
-            - "/sys/fs/cgroup/memory/memory.usage_in_bytes"
-            - "/sys/fs/cgroup/memory/memory.stat"
+- name: 10-inputs-host-base.conf
+  sections:
+  - plugin_type: inputs
+    type: procstat
+    config:
+      pid_file: /var/run/sshd.pid
+  - plugin_type: inputs
+    type: diskio
+    config: {}
+  - plugin_type: inputs
+    type: kernel
+    config: {}
+  - plugin_type: inputs
+    type: processes
+    config: {}
+  - plugin_type: inputs
+    type: netstat
+    config: {}
+  - plugin_type: inputs
+    type: lvm
+    config: {}
+  - plugin_type: inputs
+    type: cgroup
+    config:
+      paths:
+      - /sys/fs/cgroup/cpu,cpuacct/cpuacct.usage
+      - /sys/fs/cgroup/cpu,cpuacct/cpuacct.stat
+      - /sys/fs/cgroup/memory/memory.usage_in_bytes
+      - /sys/fs/cgroup/memory/memory.stat
 telegraf_plugin_files_group_vars: []
 telegraf_plugin_files_host_vars: []
 telegraf_plugin_files_playbook: []
@@ -83,34 +83,34 @@ telegraf_global_tags_playbook: {}
 # Default configuration for Telegraf. Keep the baseline intentionally small.
 telegraf_config:
   agent:
-    interval: "10s"
+    interval: 10s
     round_interval: true
     metric_batch_size: 1000
     metric_buffer_limit: 10000
-    collection_jitter: "0s"
-    flush_interval: "10s"
-    flush_jitter: "0s"
+    collection_jitter: 0s
+    flush_interval: 10s
+    flush_jitter: 0s
     precision: ""
-    hostname: "{{ ansible_hostname }}"
+    hostname: "{{ ansible_facts.hostname | default(inventory_hostname) }}"
     omit_hostname: false
   outputs:
-  - type: "prometheus_client"
+  - type: prometheus_client
     config:
-      listen: ":9273"
+      listen: :9273
       metric_version: 2
   inputs:
-  - type: "cpu"
+  - type: cpu
     config:
       percpu: true
       totalcpu: true
       collect_cpu_time: false
       report_active: false
-  - type: "mem"
+  - type: mem
     config: {}
-  - type: "disk"
+  - type: disk
     config:
-      ignore_fs: ["tmpfs", "devtmpfs", "overlay", "squashfs"]
-  - type: "net"
+      ignore_fs: [tmpfs, devtmpfs, overlay, squashfs]
+  - type: net
     config: {}
-  - type: "system"
+  - type: system
     config: {}

@@ -1,0 +1,134 @@
+---
+- name: Validate supported platform
+  ansible.builtin.assert:
+    that:
+    - ansible_facts.os_family in ["Debian", "RedHat"]
+    fail_msg: The sshd role supports Debian and RedHat families only.
+  tags: sshd
+- name: Combine ssh_server
+  ansible.builtin.set_fact:
+    sshd_server: "{{\n  (sshd_server_defaults | default([])) |\n  combine(sshd_server_group_vars | default([]), list_merge='append') |\n  combine(sshd_server_host_vars | default([]), list_merge='append') |\n  combine(sshd_server_playbook | default([]), list_merge='append')\n}}"
+  tags: sshd
+- name: Normalize sshd listen ports
+  ansible.builtin.set_fact:
+    __sshd_ports: '{{ [sshd_server.Port] if sshd_server.Port is number or sshd_server.Port is string else sshd_server.Port }}'
+  tags: sshd
+- name: Install SELinux tooling for sshd
+  ansible.builtin.package:
+    name: '{{ sshd_selinux_packages }}'
+    state: present
+    policy_rc_d: '{{ 101 if ansible_facts.os_family == ''Debian'' and not (sshd_manage_service | bool and sshd_service_state == ''started'') else omit }}'
+  when:
+  - ansible_facts.os_family == "RedHat"
+  - sshd_manage_selinux | bool
+  - ansible_facts.selinux is defined
+  - ansible_facts.selinux.status == "enabled"
+  become: true
+  tags: sshd
+- name: Combine ssh_client
+  ansible.builtin.set_fact:
+    sshd_client: "{{\n  (sshd_client_defaults | default([])) |\n  combine(sshd_client_group_vars| default([]), list_merge='append') |\n  combine(sshd_client_host_vars | default([]), list_merge='append') |\n  combine(sshd_client_playbook| default([]), list_merge='append')\n}}"
+  tags: sshd
+- name: Install package
+  ansible.builtin.package:
+    name: '{{ sshd_packages_name }}'
+    state: present
+    policy_rc_d: '{{ 101 if ansible_facts.os_family == ''Debian'' and not (sshd_manage_service | bool and sshd_service_state == ''started'') else omit }}'
+  become: true
+  tags: sshd
+- name: Generate missing SSH host keys on the managed host
+  ansible.builtin.command:
+    argv:
+    - '{{ _sshd_keygen_binary }}'
+    - -A
+    creates: '{{ _sshd_hostkey_marker }}'
+  become: true
+- name: Ensure the SSH privilege separation directory exists
+  ansible.builtin.file:
+    path: '{{ _sshd_runtime_directory }}'
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+- name: Configure client
+  ansible.builtin.template:
+    src: ssh.config.j2
+    dest: /etc/ssh/ssh_config
+    owner: root
+    group: root
+    mode: '0640'
+  notify: Restart sshd
+  become: true
+  tags: sshd
+- name: Configure server
+  ansible.builtin.template:
+    src: sshd.config.j2
+    dest: /etc/ssh/sshd_config
+    owner: root
+    group: root
+    mode: '0640'
+    validate: '{{ sshd_validate_binary }} -t -f %s'
+  notify: Restart sshd
+  become: true
+  tags: sshd
+- name: Manage sshd ports through the firewall role
+  ansible.builtin.include_role:
+    name: degitag.infrastructure.firewall
+    apply:
+      tags: sshd
+  vars:
+    firewall_manage_activation: false
+    firewall_rules:
+    - port: '{{ _sshd_firewall_port }}'
+      protocol: tcp
+      action: allow
+      comment: OpenSSH
+      zone: '{{ sshd_firewall_zone | default("public") }}'
+  loop: '{{ __sshd_ports }}'
+  loop_control:
+    loop_var: _sshd_firewall_port
+  when:
+  - sshd_manage_firewall | bool
+  tags: sshd
+- name: Allow sshd ports in SELinux
+  community.general.seport:
+    ports: '{{ item }}'
+    proto: tcp
+    setype: '{{ sshd_selinux_port_type }}'
+    state: present
+  loop: '{{ __sshd_ports }}'
+  when:
+  - ansible_facts.os_family == "RedHat"
+  - sshd_manage_selinux | bool
+  - ansible_facts.selinux is defined
+  - ansible_facts.selinux.status == "enabled"
+  become: true
+  tags: sshd
+- name: Collect SSH socket service state
+  ansible.builtin.service_facts: {}
+  when:
+  - ansible_facts.distribution == 'Ubuntu'
+  - sshd_manage_service | bool
+  - sshd_disable_socket_activation | bool
+- name: Disable socket activation for custom SSH listen ports
+  ansible.builtin.systemd_service:
+    name: ssh.socket
+    state: stopped
+    enabled: false
+  when:
+  - ansible_facts.distribution == 'Ubuntu'
+  - sshd_manage_service | bool
+  - sshd_disable_socket_activation | bool
+  - '''ssh.socket'' in (ansible_facts.services | default({}))'
+  - __sshd_ports | map('int') | list != [22]
+  notify: Restart sshd
+  become: true
+- name: Start and enable service
+  ansible.builtin.service:
+    name: '{{ sshd_service_name }}'
+    state: '{{ sshd_service_state }}'
+    enabled: '{{ sshd_service_enabled }}'
+  when: sshd_manage_service | bool
+  become: true
+  tags: sshd

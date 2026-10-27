@@ -7,8 +7,8 @@ argument_specs:
     options:
       sssd_domain_name:
         description:
-        - Controls `sssd_domain_name` for the `sssd` role.
-        required: false
+        - Required directory domain. An empty domain fails before changing identity or PAM configuration.
+        required: true
         type: str
       sssd_join_domain:
         description:
@@ -75,3 +75,10 @@ argument_specs:
         - Controls `sssd_bind_password` for the `sssd` role.
         required: false
         type: str
+        no_log: true
+      sssd_ad_group_allowed_ssh:
+        description:
+        - Additional login-only groups; these groups never receive sudo privileges.
+        required: false
+        type: list
+        elements: str

@@ -4,9 +4,18 @@ Install and configure the Unbound DNS resolver and local zones.
 
 ## Supported platforms
 
-- Ubuntu 22.04+
-- Debian 12+
-- RHEL 9+
+- Ubuntu 22.04, 24.04, 26.04
+- Debian 13
+- Rocky Linux 9 / RHEL 9
+
+## Architecture and operation
+
+Facts are collected at entry only when the required platform facts are missing.
+`tasks/preflight.yml` rejects unsupported releases before making changes and loads
+family, distribution and release variables from `vars/platform/` in that order.
+Public inputs belong in `defaults/main.yml`; platform internals belong in `vars/`.
+
+Run this role only on hosts assigned to its responsibility. Review the defaults and required inputs before rollout.
 
 ## Role Variables
 
@@ -39,7 +48,7 @@ unbound_auth_zones: []
 unbound_config:
   server:
     verbosity: 1
-    num-threads: '{{ ansible_processor_vcpus | default(ansible_processor_count | default(1)) }}'
+    num-threads: '{{ ansible_facts.processor_vcpus | default(ansible_facts.processor_count | default(1)) }}'
     root-hints: '{{ unbound_root_hints_path }}'
     tls-cert-bundle: '{{ unbound_tls_cert_bundle }}'
     log-queries: true
@@ -58,18 +67,35 @@ unbound_config:
     control-enable: false
 ```
 
-The role ships generic path defaults so argument validation can run before OS-specific vars are loaded. Platform-specific values from `vars/` still override these defaults where needed.
-
 ## Example Playbook
 
 ```yaml
 - name: Apply unbound
   hosts: all
   become: true
+  gather_facts: true
   roles:
-    - role: onkeldom.default_server.unbound
+    - role: degitag.infrastructure.unbound
 ```
 
 ## Testing
 
-The collection CI runs `ansible-lint`, `ansible-test sanity`, repository consistency tests, and per-role syntax checks using `roles/unbound/tests/test.yml`.
+Build and install the current collection checkout before running syntax checks, so the
+fully qualified role reference resolves to this implementation.
+
+Run `python tools/generate_role_scaffold.py --check`, `pytest tests/unit` and
+`bash tests/run_role_syntax_checks.sh` from the collection root.
+CI additionally runs YAML lint, Ansible lint, collection build/install and container smoke tests.
+VM functional results are tracked separately; metadata lists intended compatibility,
+not proof that every feature has passed on every distribution.
+
+## Dependencies
+
+Install the collection dependencies from `requirements.yml`. Role dependencies:
+`[]`.
+
+## Change management
+
+Use check mode where the underlying modules support it. Review the diff before applying
+changes. Network, firewall, identity and storage changes need an out-of-band recovery
+path. Secrets belong in Ansible Vault or the operator secret store, never in defaults.

@@ -86,3 +86,13 @@ argument_specs:
         - Controls `sftp_server_users` for the `sftp_server` role.
         required: false
         type: list
+      sftp_server_authorized_keys_dir:
+        description:
+        - Controls `sftp_server_authorized_keys_dir` for the `sftp_server` role.
+        required: false
+        type: str
+      sftp_server_manage_selinux:
+        description:
+        - Controls `sftp_server_manage_selinux` for the `sftp_server` role.
+        required: false
+        type: bool

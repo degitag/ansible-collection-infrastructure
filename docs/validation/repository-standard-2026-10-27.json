@@ -1,0 +1,56 @@
+{
+  "date": "2026-10-27",
+  "contract": "degitag-collections-v1",
+  "collection": "degitag.infrastructure",
+  "controller": {
+    "python": "3.12",
+    "ansible_core": "2.21.5"
+  },
+  "unit_tests_passed": 89,
+  "role_syntax_playbooks": 47,
+  "additional_syntax": "Existing functional and integration playbooks; example inventories excluded",
+  "local_checks": [
+    "repository contract",
+    "scaffold --check",
+    "pytest tests/unit",
+    "yamllint",
+    "build and installed collection",
+    "artifact identity/version/boundaries/manifest and payload hashes",
+    "syntax",
+    "ansible-lint production",
+    "ansible-test sanity compile/import outside ignored checkout",
+    "make package-smoke",
+    "bash -n",
+    "git diff --check"
+  ],
+  "shared_file_sha256": {
+    "docs/repository-standard.md": "d16398b6f6f807f55319c75d945c10550235c5c00f4adcca0372b0ec153e144a",
+    ".editorconfig": "1023fd774150f1ddc05c50686326791fa5017d933469961869cdf948244a58a1",
+    "tools/check_collection_artifact.py": "b68d7b00bbbadda8d0b579477c23fcd0a12086b4f07346224c2f5c1cc9d10458",
+    "tools/check_repository.py": "c9b29d436e4ae0c4879501724e5a589f9a770592ef02b90776c3613f38a70c3d",
+    "tools/collection_metadata.py": "5464c76212aa08dac7f0df7cb17d457c0a3aad45609df4912b440ada9827c1c0",
+    "tests/run_collection_sanity.sh": "54e797fe0f39c7e39c70615678ff66d61e8c2240588832728ece4c6bafc40aa9",
+    "tests/unit/test_collection_artifact.py": "2e781d658a7bc6eb4f96eda74265231f53ba40a9b513b52aabccff15a0ee154b",
+    "tests/unit/test_repository_contract.py": "15d685c36f0aa6112e17329b2da3cd9b93ced9ea25e2d6c208b1c43a1b890c04"
+  },
+  "artifact": {
+    "name": "degitag-infrastructure-2.0.0.tar.gz",
+    "sha256": "a06382977c5a6d7ab12b400b32c06b1e910fae58c7ac21c63927de9386dd3ec5"
+  },
+  "runtime_gaps": [
+    "No Docker/container smoke or functional runtime rerun on this controller",
+    "No new dedicated VM or cluster acceptance",
+    "No local Core 2.20 run; configured in CI",
+    "GitHub workflows not dispatched or published"
+  ],
+  "preserved": [
+    "Existing uncommitted work",
+    "Historical validation reports/hashes",
+    "Host ownership markers",
+    "Role APIs and upstream licenses"
+  ],
+  "deployment": false,
+  "published": false,
+  "command": "bash tests/run_checks.sh",
+  "exit_code": 0
+}
