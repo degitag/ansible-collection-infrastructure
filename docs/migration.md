@@ -1,6 +1,6 @@
 # Migration zum neuen Collection-Vertrag
 
-Die Host-Collection wurde vor ihrer Veroeffentlichung von `degit.default_server` ueber `degit.infrastructure` in `degitag.infrastructure` umbenannt. Rollenreferenzen, Filter-FQCNs und Collection-Abhaengigkeiten im Inventory bzw. in requirements-Dateien entsprechend umstellen. Das GitHub-Repository bleibt `OnkelDom/ansible-collection-infrastructure`; der Ansible-Namespace ist unabhaengig davon `degitag`. Die K3s-Collection behaelt `degitag.k3s`.
+Die Host-Collection wurde vor ihrer Veroeffentlichung von `degit.default_server` ueber `degit.infrastructure` in `degitag.infrastructure` umbenannt. Rollenreferenzen, Filter-FQCNs und Collection-Abhaengigkeiten im Inventory bzw. in requirements-Dateien entsprechend umstellen. Das GitHub-Repository liegt nach dem freigegebenen Transfer unter `degitag/ansible-collection-infrastructure`; der Ansible-Namespace ist unabhaengig davon `degitag`. Die K3s-Collection behaelt `degitag.k3s`.
 
 Die neue API ist bewusst inkompatibel. Produktive Playbooks muessen vor dem ersten Rollout aktualisiert werden; diese Vorbereitung fuehrt keine bestehenden Inventories oder Server automatisch um.
 

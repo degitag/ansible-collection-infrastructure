@@ -1,8 +1,8 @@
 # Ansible Collection `degitag.infrastructure`
 
-[![CI](https://github.com/OnkelDom/ansible-collection-infrastructure/actions/workflows/ci.yml/badge.svg)](https://github.com/OnkelDom/ansible-collection-infrastructure/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/OnkelDom/ansible-collection-infrastructure)](https://github.com/OnkelDom/ansible-collection-infrastructure/releases)
-[![Tag](https://img.shields.io/github/v/tag/OnkelDom/ansible-collection-infrastructure)](https://github.com/OnkelDom/ansible-collection-infrastructure/tags)
+[![CI](https://github.com/degitag/ansible-collection-infrastructure/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/degitag/ansible-collection-infrastructure/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/degitag/ansible-collection-infrastructure)](https://github.com/degitag/ansible-collection-infrastructure/releases)
+[![Tag](https://img.shields.io/github/v/tag/degitag/ansible-collection-infrastructure?sort=date)](https://github.com/degitag/ansible-collection-infrastructure/tags)
 ![Ansible Core](https://img.shields.io/badge/ansible--core-2.20%20%7C%202.21-blue)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
@@ -43,7 +43,7 @@ Controller: Python 3.12–3.14 und Ansible Core 2.20/2.21. Die verwalteten Hosts
 ```yaml
 # requirements.yml
 collections:
-  - name: git+https://github.com/OnkelDom/ansible-collection-infrastructure.git
+  - name: git+https://github.com/degitag/ansible-collection-infrastructure.git
     version: v2.0.1
 ```
 
