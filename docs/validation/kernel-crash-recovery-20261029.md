@@ -57,3 +57,17 @@ ansible-playbook degitag.infrastructure.kernel_crash_recovery \
 ```
 
 Dies setzt die beiden eigenen persistenten und laufenden Werte auf `0`. Vorher bestehende abweichende Betreiberwerte bei Bedarf gezielt wiederherstellen. Nur Entfernen der Rolle bzw. Datei setzt die laufenden Werte nicht zurueck. Diagnose: `sudo /usr/sbin/sysctl kernel.panic kernel.panic_on_oops` und `sudo vim /etc/sysctl.d/90-kernel-crash-recovery.conf`; spaetere Sysctl-Dateien sowie `/etc/sysctl.conf` auf Konflikte pruefen.
+
+## Container-Matrix
+
+Controller: Ansible Core 2.21.5 / Python 3.13 auf dev.lenmail.de, isolierte temporaere Docker-Container. Beide Playbooks liefen je Image zweimal; nachstehend jeweils der zweite Lauf. Laufzeit-Sysctls des Containerhosts wurden nicht veraendert. Der Funktionstest prueft ausserdem die Ablehnung eines ungueltigen Zeitwerts vor Aenderungen und unveraenderte Host-Sysctls im Konfigurationsmodus.
+
+| Image | Baseline-Smoke | Rollen-Funktionstest | Zweiter Lauf |
+| --- | --- | --- | --- |
+| debian-13 | bestanden (119 Tasks) | bestanden (20 Tasks) | changed=0, unreachable=0, failed=0 |
+| ubuntu-22.04 | bestanden (130 Tasks) | bestanden (22 Tasks) | changed=0, unreachable=0, failed=0 |
+| ubuntu-24.04 | bestanden (130 Tasks) | bestanden (22 Tasks) | changed=0, unreachable=0, failed=0 |
+| ubuntu-26.04 | bestanden (130 Tasks) | bestanden (22 Tasks) | changed=0, unreachable=0, failed=0 |
+| rockylinux-9 | bestanden (118 Tasks) | bestanden (22 Tasks) | changed=0, unreachable=0, failed=0 |
+
+Die fuenf Images decken die freie Plattformmatrix ab. Das ist Konfigurationsabnahme im Container, keine Abnahme eines echten Kernel-Panic-Neustarts und kein echter RHEL-Test. Die VM-Laufzeittests oben liefen mit Ansible Core 2.20 auf Debian 13. Die GitHub-Checks des Pull Requests sind davon unabhaengig und werden separat angezeigt.
