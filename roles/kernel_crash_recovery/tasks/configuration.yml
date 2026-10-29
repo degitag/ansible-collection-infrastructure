@@ -1,0 +1,56 @@
+---
+- name: Validate the panic reboot delay
+  ansible.builtin.assert:
+    that:
+    - kernel_crash_recovery_panic_timeout | int >= 1
+    - kernel_crash_recovery_panic_timeout | int <= 3600
+    fail_msg: kernel_crash_recovery_panic_timeout must be between 1 and 3600 seconds.
+    quiet: true
+
+- name: Collect missing virtualization facts before live activation
+  ansible.builtin.setup:
+    gather_subset:
+    - '!all'
+    - virtualization
+  when:
+  - kernel_crash_recovery_apply | bool
+  - "'virtualization_type' not in ansible_facts"
+
+- name: Prevent changing the shared kernel from a container
+  ansible.builtin.assert:
+    that:
+    - ansible_facts['virtualization_type'] | default('') not in ['docker', 'podman', 'container', 'containerd', 'lxc', 'lxc-libvirt', 'openvz', 'systemd-nspawn']
+    fail_msg: Use kernel_crash_recovery_apply=false for configuration-only container tests.
+    quiet: true
+  when: kernel_crash_recovery_apply | bool
+
+- name: Ensure the sysctl fragment directory exists
+  ansible.builtin.file:
+    path: '{{ kernel_crash_recovery_sysctl_file | dirname }}'
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Persist the kernel crash recovery policy
+  ansible.builtin.template:
+    src: kernel-crash-recovery.conf.j2
+    dest: '{{ kernel_crash_recovery_sysctl_file }}'
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Reconcile only the managed live kernel settings
+  ansible.posix.sysctl:
+    name: '{{ item.name }}'
+    value: '{{ item.value }}'
+    sysctl_file: '{{ kernel_crash_recovery_sysctl_file }}'
+    state: present
+    sysctl_set: true
+    reload: false
+  loop:
+  - name: kernel.panic
+    value: '{{ kernel_crash_recovery_panic_timeout if kernel_crash_recovery_enabled | bool else 0 }}'
+  - name: kernel.panic_on_oops
+    value: '{{ 1 if kernel_crash_recovery_enabled | bool else 0 }}'
+  when: kernel_crash_recovery_apply | bool

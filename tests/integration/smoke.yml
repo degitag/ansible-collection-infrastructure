@@ -45,6 +45,7 @@
       read_only: true
     resolvconf_manage_config: true
     resolvconf_unsafe_writes: true
+    kernel_crash_recovery_apply: false
     conditional_reboot_manage_service: false
     conditional_reboot_log_path: ''
   pre_tasks:
@@ -56,6 +57,9 @@
     ansible.builtin.set_fact:
       resolvconf_nameservers: "{{ (__smoke_initial_resolver.content | b64decode) | regex_findall('(?m)^nameserver\\s+(\\S+)') }}"
   tasks:
+  - name: Render kernel crash recovery policy without changing the shared kernel
+    ansible.builtin.import_role:
+      name: degitag.infrastructure.kernel_crash_recovery
   - name: Apply baseline package role
     ansible.builtin.import_role:
       name: degitag.infrastructure.packages

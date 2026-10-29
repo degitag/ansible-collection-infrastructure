@@ -1,0 +1,22 @@
+---
+argument_specs:
+  main:
+    short_description: Entry point for the kernel_crash_recovery role.
+    description:
+    - Validate variables for the `kernel_crash_recovery` role.
+    options:
+      kernel_crash_recovery_enabled:
+        description:
+        - Enable panic-on-Oops and delayed reboot; false sets both managed sysctls to zero.
+        required: false
+        type: bool
+      kernel_crash_recovery_panic_timeout:
+        description:
+        - "Positive panic reboot delay in seconds (1\u20133600), used when enabled."
+        required: false
+        type: int
+      kernel_crash_recovery_apply:
+        description:
+        - Apply the policy to the running kernel as well as persisting it. False only renders the next-boot policy.
+        required: false
+        type: bool

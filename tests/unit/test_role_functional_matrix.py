@@ -56,5 +56,5 @@ def test_workflow_outputs_use_real_newlines(tmp_path, monkeypatch):
     exec(compile(script, '<workflow-matrix>', 'exec'), {})
     lines = output.read_text().splitlines()
     assert len(lines) == 2
-    assert len(json.loads(lines[0].removeprefix('matrix='))['include']) == 9
+    assert json.loads(lines[0].removeprefix('matrix=')) == build_matrix(changed_files=['tests/run_container_playbook.sh'])
     assert lines[1] == 'has-tests=true'

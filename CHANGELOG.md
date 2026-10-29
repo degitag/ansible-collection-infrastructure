@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Add `kernel_crash_recovery` with persistent panic-on-Oops, a configurable reboot delay, live drift correction and explicit rollback.
+- Add a serial rollout playbook and container-safe configuration tests; runtime activation is rejected in containers.
+
 ## 2.0.1 - 2026-10-27
 
 - Make Debian-family Telegraf repository key conversion idempotent while preserving key rotation and missing/empty keyring recovery.

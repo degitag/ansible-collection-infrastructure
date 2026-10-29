@@ -68,6 +68,7 @@ role_descriptions:
   gui: Install an explicitly enabled distribution-specific graphical desktop.
   conditional_reboot: Schedule requirement-based reboots within an explicit maintenance window.
   prompt: Configure an interactive Bash prompt and optional operator helpers.
+  kernel_crash_recovery: Configure persistent automatic reboot after a kernel panic or Oops.
 role_galaxy_tags:
   apt_repos:
   - apt
@@ -102,6 +103,7 @@ role_example_playbooks:
   msmtp: "- name: Configure explicit system mail relay\n  hosts: servers\n  become: true\n  gather_facts: true\n  roles:\n    - role: degitag.infrastructure.msmtp\n      vars:\n        msmtp_default_account: relay\n        msmtp_accounts:\n          - name: relay\n            host: smtp.example.net\n            port: 587\n            from: servers@example.net\n            auth: \"on\"\n            user: \"{{ vault_smtp_user }}\"\n            password: \"{{ vault_smtp_password }}\""
   conditional_reboot: "- name: Configure maintenance reboot policy\n  hosts: maintenance_hosts\n  become: true\n  gather_facts: true\n  roles:\n    - role: degitag.infrastructure.conditional_reboot\n      vars:\n        conditional_reboot_enabled: true\n        conditional_reboot_time:\n          hour: 4\n          minute: 0\n"
   prompt: "- name: Configure operator prompt\n  hosts: linux_hosts\n  become: true\n  gather_facts: true\n  roles:\n    - role: degitag.infrastructure.prompt\n"
+  kernel_crash_recovery: "- name: Configure kernel crash recovery\n  hosts: linux_vms\n  become: true\n  gather_facts: true\n  serial: 1\n  roles:\n    - role: degitag.infrastructure.kernel_crash_recovery\n      vars:\n        kernel_crash_recovery_enabled: true\n        kernel_crash_recovery_panic_timeout: 60\n"
 role_platform_overrides:
   certbot:
   - *id001
@@ -159,6 +161,8 @@ role_notes:
   ca: 'Validates nonempty certificate source matches by default, creates the platform trust directory and verifies deployed certificates using OpenSSL against the native trust bundle after updating trust. Set ca_require_certificates: false for intentionally empty input. Check mode does not run verification against files not yet deployed.'
   sshd: Prefers modern AEAD ciphers; AES-CTR remains for compatible clients. EL9 uses an AES-only platform list to avoid advertising ChaCha20 in FIPS environments; this is not a compliance certification. Override sshd_server_* inputs deliberately when site crypto policy differs. Ubuntu SSH socket activation is disabled for custom ports when sshd_disable_socket_activation is true and service management is enabled. Existing Match exceptions belong in sshd_server_match_blocks; no UKHD accounts are hard-coded.
   nginx: 'Supports TCP/UDP stream upstreams, maps and servers in addition to HTTP. Installs and loads the distribution stream module only when stream declarations are configured. Set nginx_manage_stream_module: false for an external/static module source and configure nginx_extra_conf_options as required. The complete configuration is validated with nginx -t before restart.'
+  kernel_crash_recovery: "Including this role explicitly enables panic-on-Oops and a 60-second panic reboot delay. It configures recovery; it never deliberately panics or reboots a host. The platform matrix covers Debian 13, Ubuntu LTS and EL9; live acceptance must be recorded per platform. kernel_crash_recovery_panic_timeout accepts 1\u20133600 seconds. kernel_crash_recovery_apply: false writes the next-boot policy without changing the running kernel; it does not disable the persisted policy. Container tests must use this mode because containers share their host kernel. Live activation in detected containers is rejected. Apply without reboot; reconcile runtime drift even when the fragment already matches. The dedicated root-owned /etc/sysctl.d/90-kernel-crash-recovery.conf owns only kernel.panic and kernel.panic_on_oops. Do not declare these keys in another sysctl role or fragment; a later sysctl.d file or /etc/sysctl.conf may override boot values. WARN, OOM and lockup policies remain outside
+    this role. Keep persistent journal/pstore evidence and unexpected-reboot alerts; kdump and watchdogs need separate coordination. Recovery can lose uncommitted writes and a recurring kernel defect can cause reboot loops. It does not repair a kernel bug or guarantee recovery from every hang. Roll out serially to the test host first, check live values and a second unchanged run, then expand by inventory limit. Do not inject a panic on a shared test server. Rollback: set kernel_crash_recovery_enabled: false and apply with kernel_crash_recovery_apply: true; both persisted and live values become zero. Configuration-only rollback takes effect on the next sysctl load or boot. Removing the role or deleting the fragment alone does not reset running values. Restore any prior custom policy explicitly. Use vim to inspect the fragment when diagnosing drift."
 role_argument_overrides:
   packages:
     packages_defaults_install:
@@ -539,3 +543,16 @@ role_argument_overrides:
         ssl_preread:
           type: bool
           required: false
+  kernel_crash_recovery:
+    kernel_crash_recovery_enabled:
+      type: bool
+      description:
+      - Enable panic-on-Oops and delayed reboot; false sets both managed sysctls to zero.
+    kernel_crash_recovery_panic_timeout:
+      type: int
+      description:
+      - "Positive panic reboot delay in seconds (1\u20133600), used when enabled."
+    kernel_crash_recovery_apply:
+      type: bool
+      description:
+      - Apply the policy to the running kernel as well as persisting it. False only renders the next-boot policy.
