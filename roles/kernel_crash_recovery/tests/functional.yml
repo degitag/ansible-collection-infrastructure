@@ -1,0 +1,62 @@
+---
+- name: Verify container-safe kernel crash policy configuration
+  hosts: all
+  gather_facts: true
+  become: true
+  vars:
+    kernel_crash_recovery_apply: false
+  tasks:
+  - name: Read the original host-shared kernel policy
+    ansible.builtin.slurp:
+      src: '{{ item }}'
+    loop:
+    - /proc/sys/kernel/panic
+    - /proc/sys/kernel/panic_on_oops
+    register: kernel_crash_recovery_before
+
+  - name: Reject a zero reboot delay before changing configuration
+    block:
+    - name: Apply an invalid timeout
+      ansible.builtin.include_role:
+        name: degitag.infrastructure.kernel_crash_recovery
+      vars:
+        kernel_crash_recovery_panic_timeout: 0
+    - name: Fail if the invalid policy was accepted
+      ansible.builtin.fail:
+        msg: Invalid timeout was accepted.
+    rescue:
+    - name: Verify validation rejected the timeout
+      ansible.builtin.assert:
+        that:
+        - "'must be between 1 and 3600' in ansible_failed_result.msg"
+
+  - name: Render the policy without changing the shared kernel
+    ansible.builtin.include_role:
+      name: degitag.infrastructure.kernel_crash_recovery
+
+  - name: Read the rendered policy
+    ansible.builtin.slurp:
+      src: /etc/sysctl.d/90-kernel-crash-recovery.conf
+    register: kernel_crash_recovery_fragment
+
+  - name: Inspect configuration permissions
+    ansible.builtin.stat:
+      path: /etc/sysctl.d/90-kernel-crash-recovery.conf
+    register: kernel_crash_recovery_fragment_stat
+
+  - name: Read the unchanged host-shared kernel policy
+    ansible.builtin.slurp:
+      src: '{{ item }}'
+    loop:
+    - /proc/sys/kernel/panic
+    - /proc/sys/kernel/panic_on_oops
+    register: kernel_crash_recovery_after
+
+  - name: Verify the persistent policy and configuration-only isolation
+    ansible.builtin.assert:
+      that:
+      - "'kernel.panic = 60' in (kernel_crash_recovery_fragment.content | b64decode)"
+      - "'kernel.panic_on_oops = 1' in (kernel_crash_recovery_fragment.content | b64decode)"
+      - kernel_crash_recovery_fragment_stat.stat.mode == '0644'
+      - kernel_crash_recovery_fragment_stat.stat.uid == 0
+      - kernel_crash_recovery_before.results | map(attribute='content') | list == kernel_crash_recovery_after.results | map(attribute='content') | list

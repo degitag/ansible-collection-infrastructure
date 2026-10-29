@@ -1,0 +1,4 @@
+---
+kernel_crash_recovery_enabled: true
+kernel_crash_recovery_panic_timeout: 60
+kernel_crash_recovery_apply: true

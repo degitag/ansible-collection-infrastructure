@@ -1,0 +1,2 @@
+---
+kernel_crash_recovery_sysctl_file: /etc/sysctl.d/90-kernel-crash-recovery.conf

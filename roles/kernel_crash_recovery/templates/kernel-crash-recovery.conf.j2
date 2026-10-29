@@ -1,0 +1,4 @@
+# Managed by degitag.infrastructure.kernel_crash_recovery.
+# This policy does not trigger a reboot during configuration.
+kernel.panic = {{ kernel_crash_recovery_panic_timeout if kernel_crash_recovery_enabled | bool else 0 }}
+kernel.panic_on_oops = {{ 1 if kernel_crash_recovery_enabled | bool else 0 }}

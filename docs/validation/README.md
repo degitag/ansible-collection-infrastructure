@@ -1,5 +1,7 @@
 # Validierung der Collection 2.0.0
 
+Neue Rolle und Testrollout vom 29.10.2026: [kernel-crash-recovery-20261029.md](kernel-crash-recovery-20261029.md).
+
 Repo-uebergreifender Abschluss: [repository-family-2026-10-27.md](repository-family-2026-10-27.md).
 
 Aktueller Struktur-Nachweis: [repository-alignment-20261027.md](repository-alignment-20261027.md).

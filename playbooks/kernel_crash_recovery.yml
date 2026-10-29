@@ -1,0 +1,8 @@
+---
+- name: Configure kernel crash recovery on selected Linux hosts
+  hosts: all
+  serial: 1
+  become: true
+  gather_facts: true
+  roles:
+  - role: degitag.infrastructure.kernel_crash_recovery

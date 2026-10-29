@@ -1,0 +1,133 @@
+---
+- name: Verify kernel recovery policy on an explicitly selected test VM
+  hosts: kernel_crash_recovery_test_vms
+  become: true
+  gather_facts: true
+  tasks:
+  - name: Require an explicit runtime test selection
+    ansible.builtin.assert:
+      that:
+      - kernel_crash_recovery_runtime_test | default(false) | bool
+      - not ansible_check_mode
+      fail_msg: Run only on a dedicated test VM with kernel_crash_recovery_runtime_test=true.
+
+  - name: Read the boot identity before the test
+    ansible.builtin.slurp:
+      src: /proc/sys/kernel/random/boot_id
+    register: kernel_crash_recovery_boot_before
+
+  - name: Read unrelated kernel policies before the test
+    ansible.builtin.command:
+      argv:
+      - /usr/sbin/sysctl
+      - -n
+      - kernel.panic_on_warn
+      - vm.panic_on_oom
+      - kernel.softlockup_panic
+      - kernel.hardlockup_panic
+    register: kernel_crash_recovery_unrelated_before
+    changed_when: false
+
+  - name: Exercise recovery policy transitions without triggering a crash
+    block:
+    - name: Verify explicit rollback
+      ansible.builtin.include_role:
+        name: degitag.infrastructure.kernel_crash_recovery
+      vars:
+        kernel_crash_recovery_enabled: false
+        kernel_crash_recovery_apply: true
+
+    - name: Read the disabled live policy
+      ansible.builtin.command: /usr/sbin/sysctl -n kernel.panic kernel.panic_on_oops
+      register: kernel_crash_recovery_disabled
+      changed_when: false
+
+    - name: Verify both live settings were disabled
+      ansible.builtin.assert:
+        that:
+        - kernel_crash_recovery_disabled.stdout_lines == ['0', '0']
+
+    - name: Render a different next-boot policy without runtime activation
+      ansible.builtin.include_role:
+        name: degitag.infrastructure.kernel_crash_recovery
+      vars:
+        kernel_crash_recovery_enabled: true
+        kernel_crash_recovery_panic_timeout: 120
+        kernel_crash_recovery_apply: false
+
+    - name: Read the configuration-only live policy
+      ansible.builtin.command: /usr/sbin/sysctl -n kernel.panic kernel.panic_on_oops
+      register: kernel_crash_recovery_render_only
+      changed_when: false
+
+    - name: Read the alternative persistent policy
+      ansible.builtin.slurp:
+        src: /etc/sysctl.d/90-kernel-crash-recovery.conf
+      register: kernel_crash_recovery_rendered
+
+    - name: Verify rendering did not activate the alternative policy
+      ansible.builtin.assert:
+        that:
+        - kernel_crash_recovery_render_only.stdout_lines == ['0', '0']
+        - "'kernel.panic = 120' in (kernel_crash_recovery_rendered.content | b64decode)"
+
+    - name: Activate the intended policy
+      ansible.builtin.include_role:
+        name: degitag.infrastructure.kernel_crash_recovery
+      vars:
+        kernel_crash_recovery_enabled: true
+        kernel_crash_recovery_panic_timeout: 60
+        kernel_crash_recovery_apply: true
+
+    - name: Introduce runtime drift without changing the persistent file
+      ansible.builtin.command: /usr/sbin/sysctl -w kernel.panic=59
+      changed_when: true
+
+    - name: Reconcile runtime drift with an unchanged persistent policy
+      ansible.builtin.include_role:
+        name: degitag.infrastructure.kernel_crash_recovery
+      vars:
+        kernel_crash_recovery_enabled: true
+        kernel_crash_recovery_panic_timeout: 60
+        kernel_crash_recovery_apply: true
+
+    - name: Read the reconciled live policy
+      ansible.builtin.command: /usr/sbin/sysctl -n kernel.panic kernel.panic_on_oops
+      register: kernel_crash_recovery_reconciled
+      changed_when: false
+
+    - name: Verify runtime reconciliation
+      ansible.builtin.assert:
+        that:
+        - kernel_crash_recovery_reconciled.stdout_lines == ['60', '1']
+    always:
+    - name: Leave the approved recovery policy active even if a test fails
+      ansible.builtin.include_role:
+        name: degitag.infrastructure.kernel_crash_recovery
+      vars:
+        kernel_crash_recovery_enabled: true
+        kernel_crash_recovery_panic_timeout: 60
+        kernel_crash_recovery_apply: true
+
+  - name: Read the boot identity after the test
+    ansible.builtin.slurp:
+      src: /proc/sys/kernel/random/boot_id
+    register: kernel_crash_recovery_boot_after
+
+  - name: Read unrelated kernel policies after the test
+    ansible.builtin.command:
+      argv:
+      - /usr/sbin/sysctl
+      - -n
+      - kernel.panic_on_warn
+      - vm.panic_on_oom
+      - kernel.softlockup_panic
+      - kernel.hardlockup_panic
+    register: kernel_crash_recovery_unrelated_after
+    changed_when: false
+
+  - name: Verify no reboot and no changes to unrelated policies
+    ansible.builtin.assert:
+      that:
+      - kernel_crash_recovery_boot_before.content == kernel_crash_recovery_boot_after.content
+      - kernel_crash_recovery_unrelated_before.stdout == kernel_crash_recovery_unrelated_after.stdout

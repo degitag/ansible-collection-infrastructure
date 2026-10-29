@@ -20,6 +20,8 @@ Reproduzierbare Betriebssystem-Baseline und allgemeine Linux-Dienste. Host-Netzw
 
 `proxy` normalisiert Anmeldedaten fuer Systemwerkzeuge und pip; `docker` uebernimmt denselben Proxy-Vertrag fuer den Daemon. Die Rollen [`conditional_reboot`](roles/conditional_reboot/README.md) und [`prompt`](roles/prompt/README.md) stellen allgemeine Wartungs- und Shell-Funktionen bereit. Wartungsneustarts bleiben im Standard deaktiviert. PRTG und kundenspezifische GitLab-Proxydateien gehoeren nicht zur Collection.
 
+Die Rolle [`kernel_crash_recovery`](roles/kernel_crash_recovery/README.md) konfiguriert die automatische Wiederherstellung nach Kernel-Oops/Panic. Das Collection-Playbook `degitag.infrastructure.kernel_crash_recovery` rollt seriell auf per Inventory-Limit ausgewaehlte Hosts aus.
+
 ### Gemeinsame Nutzung
 
 [Gemeinsamer Nutzungsvertrag](docs/collection-usage.md) beschreibt Installation, Rollenaufbau, Abhängigkeiten und den einheitlichen lokalen Prüfaufruf `bash tests/run_checks.sh`.
@@ -44,7 +46,7 @@ Controller: Python 3.12–3.14 und Ansible Core 2.20/2.21. Die verwalteten Hosts
 # requirements.yml
 collections:
   - name: git+https://github.com/degitag/ansible-collection-infrastructure.git
-    version: v2.0.1
+    version: v2.1.0
 ```
 
 Lokal aus dem vorbereiteten Checkout bauen:
@@ -52,10 +54,10 @@ Lokal aus dem vorbereiteten Checkout bauen:
 ```bash
 ansible-galaxy collection install -r requirements.yml
 ansible-galaxy collection build --force
-ansible-galaxy collection install degitag-infrastructure-2.0.1.tar.gz --force
+ansible-galaxy collection install degitag-infrastructure-2.1.0.tar.gz --force
 ```
 
-Das GitHub-Repository liegt unter `OnkelDom`, der Ansible-Namespace ist `degitag`. Die Git-Installation setzt einen passenden Release-Tag voraus; der Build aus dem Checkout ist davon unabhaengig.
+Das GitHub-Repository liegt unter `degitag`, die Collection heisst `degitag.infrastructure`. Die Git-Installation setzt einen passenden Release-Tag voraus; der Build aus dem Checkout ist davon unabhaengig.
 
 ## Verwendung
 
