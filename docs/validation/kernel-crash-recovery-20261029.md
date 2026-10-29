@@ -70,4 +70,4 @@ Controller: Ansible Core 2.21.5 / Python 3.13 auf dev.lenmail.de, isolierte temp
 | ubuntu-26.04 | bestanden (130 Tasks) | bestanden (22 Tasks) | changed=0, unreachable=0, failed=0 |
 | rockylinux-9 | bestanden (118 Tasks) | bestanden (22 Tasks) | changed=0, unreachable=0, failed=0 |
 
-Die fuenf Images decken die freie Plattformmatrix ab. Das ist Konfigurationsabnahme im Container, keine Abnahme eines echten Kernel-Panic-Neustarts und kein echter RHEL-Test. Die VM-Laufzeittests oben liefen mit Ansible Core 2.20 auf Debian 13. Die GitHub-Checks des Pull Requests sind davon unabhaengig und werden separat angezeigt.
+Die fuenf Images decken die freie Plattformmatrix ab. Das ist Konfigurationsabnahme im Container, keine Abnahme eines echten Kernel-Panic-Neustarts und kein echter RHEL-Test. Die VM-Laufzeittests oben liefen ebenfalls mit Ansible Core 2.21.5, auf einem lokalen Controller mit Python 3.12, gegen Debian 13. Die GitHub-Checks des Pull Requests sind davon unabhaengig und werden separat angezeigt.
