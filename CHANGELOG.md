@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.1.0 - 2026-10-29
 
 - Add `kernel_crash_recovery` with persistent panic-on-Oops, a configurable reboot delay, live drift correction and explicit rollback.
 - Add a serial rollout playbook and container-safe configuration tests; runtime activation is rejected in containers.
